@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+.gcloud/
+.gcp/
+*.json
+uploads/
+icons/
+optimized_association_photos/
+documents/
+association_photos/
+working_file.ipynb
+data/
+poppler-24.08.0
+artifacts/
