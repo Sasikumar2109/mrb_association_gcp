@@ -12,6 +12,8 @@ import time
 from reportlab.lib.utils import ImageReader
 import io
 import constants
+from datetime import timedelta
+from urllib.parse import urlparse
 
 
 load_dotenv()
@@ -26,6 +28,28 @@ def upload_file_to_gcs(bucket_name, file, destination_blob_name):
     blob.upload_from_file(file,rewind=True)
     return blob.public_url
 
+
+def upload_file_to_gcs(bucket_name, file, destination_blob_name, make_public=False, expiration_minutes=300):
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(destination_blob_name)
+
+    # Upload file
+    blob.upload_from_file(file, rewind=True)
+
+    if make_public:
+        # Set public access if required (for logos, symbols, etc.)
+        blob.make_public()
+        return blob.public_url
+    else:
+        # Generate signed URL (temporary access)
+        url = blob.generate_signed_url(
+            version="v4",
+            expiration=timedelta(minutes=expiration_minutes),
+            method="GET"
+        )
+        return url
+
 def upload_file_to_s3(bucket_name, file_obj, destination_key, make_public=True):
     """
     Upload file object to AWS S3
@@ -38,7 +62,8 @@ def upload_file_to_s3(bucket_name, file_obj, destination_key, make_public=True):
         return f"https://{bucket_name}.s3.ap-south-1.amazonaws.com/{destination_key}"
     else:
         return f"s3://{bucket_name}/{destination_key}"
-    
+
+# upload files    
 def upload_file(file_obj,doc_name,subfolder,type,user_id):
     if machine=="local":
         os.makedirs(subfolder, exist_ok=True)
@@ -47,7 +72,11 @@ def upload_file(file_obj,doc_name,subfolder,type,user_id):
         with open(file_path, "wb") as f:
             f.write(file_obj.getbuffer())
         return file_path
-    else:
+    elif machine=="aws":
+        file_path = f"{subfolder}/{type}_{user_id}_{doc_name}"
+        blob_path = upload_file_to_s3(bucket_name, file_obj,file_path)
+        return blob_path
+    elif machine=="gcp":
         file_path = f"{subfolder}/{type}_{user_id}_{doc_name}"
         blob_path = upload_file_to_gcs(bucket_name, file_obj,file_path)
         return blob_path
@@ -66,6 +95,23 @@ def convert_to_dict(cursor, rows):
         result = rows
     return result
 
+def generate_signed_url(file_url: str, expiration=3600):
+    """
+    Generate a signed URL for a private GCS object.
+    file_url: full https://storage.googleapis.com/bucket/path/file.pdf
+    expiration: time in seconds (default 1 hour)
+    """
+    parsed = urlparse(file_url)
+    # parsed.path looks like "/bucket-name/path/to/file"
+    parts = parsed.path.lstrip("/").split("/", 1)
+    bucket_name, blob_name = parts[0], parts[1]
+
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+
+    url = blob.generate_signed_url(expiration=expiration)
+    return url
 
 def download_document_pdf(label: str, file_path:str, machine: str):
     if not file_path:
@@ -80,7 +126,7 @@ def download_document_pdf(label: str, file_path:str, machine: str):
                 st.download_button(label=f"Download {label}", data=f, file_name=os.path.basename(file_path),mime="application/pdf")
         else:
             st.warning(f"{label} not available.")
-    else:
+    elif machine == "aws":
         if file_path.startswith("http"):
             try:
                 response = requests.get(file_path)
@@ -91,6 +137,16 @@ def download_document_pdf(label: str, file_path:str, machine: str):
             except Exception as e:
                 st.error(f"Error downloading {label}: {str(e)}")
         else:
+            st.error(f"Invalid file URL for {label}.")
+    elif machine == "gcp":
+        try:
+            signed_url = generate_signed_url(file_path, expiration=600)
+            response = requests.get(signed_url)
+            if response.status_code == 200:
+                st.download_button(label=f"Download {label}",data=response.content,file_name=file_path.split("/")[-1],mime="application/octet-stream")
+            else:
+                st.error(f"Failed to download {label} from GCS.")
+        except:
             st.error(f"Invalid file URL for {label}.")
 
 
@@ -164,10 +220,16 @@ def get_image_reader(image_path_or_url):
             response = requests.get(image_path_or_url)
             if response.status_code == 200:
                 return ImageReader(io.BytesIO(response.content))
+            
+            elif response.status_code == 403 and "storage.googleapis.com" in image_path_or_url:
+                signed_url = generate_signed_url(image_path_or_url, expiration=600)
+                response = requests.get(signed_url)
+                if response.status_code == 200:
+                    return ImageReader(io.BytesIO(response.content))
         elif os.path.exists(image_path_or_url):
             return ImageReader(image_path_or_url)
     except Exception as e:
-        print(f"Image load error: {e}")
+        st.error(f"Unable to load image.")
     return None
 
 
@@ -181,7 +243,7 @@ def display_image_from_path(photo_path, caption="Image", width=120, machine="loc
             st.image(photo_path, width=width, caption=caption)
         else:
             st.warning(f"{caption} not available.")
-    else:
+    elif machine=="aws":
         try:
             response = requests.get(photo_path)
             if response.status_code == 200:
@@ -190,6 +252,12 @@ def display_image_from_path(photo_path, caption="Image", width=120, machine="loc
                 st.warning(f"{caption} not found in cloud.")
         except Exception as e:
             st.error(f"Error loading {caption}: {e}")
+    elif machine == "gcp":
+        try:
+            signed_url = generate_signed_url(photo_path, expiration=600)  # valid 10 min
+            st.image(signed_url, width=width, caption=caption)
+        except Exception as e:
+            st.error(f"Error loading {caption} from GCS: {e}")
 
 def display_photo(photo_path, caption=None, use_container_width=False, width=None):
     if not photo_path:

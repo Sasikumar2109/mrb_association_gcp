@@ -1667,7 +1667,7 @@ def update_profile_page():
             rnrm_doc = st.file_uploader(
                 "RNRM Document",
                 type=["pdf", "jpg", "jpeg", "png"],
-                help="Upload your RNRM certificate/document (PDF/JPG/JPEG/PNG, max 1MB).",
+                help="Upload your RNRM certificate/document (PDF/JPG/JPEG/PNG, max 300kb).",
                 disabled=form_disabled,
                 key="rnrm_doc_uploader"
             )
@@ -1675,7 +1675,7 @@ def update_profile_page():
             aadhaar_doc = st.file_uploader(
                 "Aadhaar Document",
                 type=["pdf", "jpg", "jpeg", "png"],
-                help="Upload your Aadhaar document (PDF/JPG/JPEG/PNG, max 1MB).",
+                help="Upload your Aadhaar document (PDF/JPG/JPEG/PNG, max 300kb).",
                 disabled=form_disabled,
                 key="aadhaar_doc_uploader"
             )
@@ -1755,10 +1755,10 @@ def update_profile_page():
                 doc_name = passport_photo.name
                 passport_photo_path = file_utils.upload_file(passport_photo,doc_name,subfolder,type,user_id)
         
-        if rnrm_doc is not None and rnrm_doc.size > 1 * 1024 * 1024:
+        if rnrm_doc is not None and rnrm_doc.size > 1 * 300 * 300:
             st.error("RNRM Document file size should not exceed 1MB.")
             file_error = True
-        if aadhaar_doc is not None and aadhaar_doc.size > 1 * 1024 * 1024:
+        if aadhaar_doc is not None and aadhaar_doc.size > 1 * 300 * 300:
             st.error("Aadhaar Document file size should not exceed 1MB.")
             file_error = True
         phone_error = False
@@ -1799,14 +1799,14 @@ def update_profile_page():
             else:
                 #GCP Update
 
-                if rnrm_doc is not None and rnrm_doc.size <= 1 * 1024 * 1024:
+                if rnrm_doc is not None and rnrm_doc.size <= 1 * 300 * 300:
                     subfolder = sub_rnrm_path
                     type = 'user_aadhar'
                     user_id = email
                     doc_name = rnrm_doc.name
                     rnrm_doc_path = file_utils.upload_file(rnrm_doc,doc_name,subfolder,type,user_id)
 
-                if aadhaar_doc is not None and aadhaar_doc.size <= 1 * 1024 * 1024:
+                if aadhaar_doc is not None and aadhaar_doc.size <= 1 * 300 * 300:
                     subfolder = sub_aadhar_path
                     type = 'user_aadhar'
                     user_id = email

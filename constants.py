@@ -28,7 +28,6 @@ sub_rnrm_path = 'uploads/rnrm'
 sub_aadhar_path = 'uploads/aadhar'
 sub_term_path = 'data/documents/terms_and_conditions'
 
-
 if machine=="local":
     photo1 = photo1_path
     photo2 = photo1_path
@@ -40,7 +39,8 @@ if machine=="local":
     photo8 = photo1_path
     photo9 = photo1_path
     photo10 = photo1_path
-else:
+
+elif machine=="aws":
     photo1 = f"https://mrb-association-files.s3.ap-south-1.amazonaws.com/{photo1_path}"
     photo2 = f"https://mrb-association-files.s3.ap-south-1.amazonaws.com/{photo2_path}"
     photo3 = f"https://mrb-association-files.s3.ap-south-1.amazonaws.com/{photo3_path}"
@@ -52,6 +52,19 @@ else:
     photo9 = f"https://mrb-association-files.s3.ap-south-1.amazonaws.com/{photo9_path}"
     photo10 = f"https://mrb-association-files.s3.ap-south-1.amazonaws.com/{photo10_path}"
 
+elif machine=="gcp":
+    photo1 = f"https://storage.googleapis.com/{bucket_name}/{photo1_path}"
+    photo2 = f"https://storage.googleapis.com/{bucket_name}/{photo2_path}"
+    photo3 = f"https://storage.googleapis.com/{bucket_name}/{photo3_path}"
+    photo4 = f"https://storage.googleapis.com/{bucket_name}/{photo4_path}"
+    photo5 = f"https://storage.googleapis.com/{bucket_name}/{photo5_path}"
+    photo6 = f"https://storage.googleapis.com/{bucket_name}/{photo6_path}"
+    photo7 = f"https://storage.googleapis.com/{bucket_name}/{photo7_path}"
+    photo8 = f"https://storage.googleapis.com/{bucket_name}/{photo8_path}"
+    photo9 = f"https://storage.googleapis.com/{bucket_name}/{photo9_path}"
+    photo10 = f"https://storage.googleapis.com/{bucket_name}/{photo10_path}"    
+
+
 def image_url_to_base64(url: str):
     response = requests.get(url)
     response.raise_for_status()
@@ -62,16 +75,23 @@ if machine=='local':
     hospital_symbol_path = hospital_symbol_path
     logo_base64 = base64.b64encode(open(logo_path, 'rb').read()).decode()
     symbol_base64 = base64.b64encode(open(hospital_symbol_path, 'rb').read()).decode()
-else:
+elif machine=="aws":
     logo_path = f"https://mrb-association-files.s3.ap-south-1.amazonaws.com/{logo_path}"
     hospital_symbol_path = f"https://mrb-association-files.s3.ap-south-1.amazonaws.com/{hospital_symbol_path}"
     logo_base64 = image_url_to_base64(logo_path)
     symbol_base64 = image_url_to_base64(hospital_symbol_path)
+elif machine=="gcp":
+    logo_path = f"https://storage.googleapis.com/{bucket_name}/{logo_path}"
+    hospital_symbol_path = f"https://storage.googleapis.com/{bucket_name}/{hospital_symbol_path}"
+    logo_base64 = base64.b64encode(requests.get(logo_path).content).decode()
+    symbol_base64 = base64.b64encode(requests.get(hospital_symbol_path).content).decode()
 
+      
 aws_access_key = os.getenv("AWS_ACCESS_KEY")
 aws_secret_key = os.getenv("AWS_SECRECT_ACCESS")
 aws_region = os.getenv("AWS_REGION")
 bucket_name = os.getenv("S3_BUCKET_NAME")
+
 
 s3 = boto3.client(
     "s3",
