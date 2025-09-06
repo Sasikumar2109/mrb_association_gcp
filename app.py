@@ -39,7 +39,7 @@ load_dotenv()
 ADMIN_CODE = os.getenv("ADMIN_CODE")
 machine = os.getenv("MACHINE")
 poppler_path = os.getenv("POPPLER")
-bucket_name = os.getenv("BUCKET_NAME")
+bucket_name = os.getenv("GCP_BUCKET_NAME")
 
 sub_sign_path = constants.sub_sign_path
 sub_photo_path =  constants.sub_photo_path
@@ -58,8 +58,8 @@ if machine=='aws':
     logo_base64 = base64.b64encode(requests.get(logo_path).content).decode()
     symbol_base64 = base64.b64encode(requests.get(hospital_symbol_path).content).decode()
 if machine=='gcp':
-    logo_path = f"https://mrb-association-files.s3.ap-south-1.amazonaws.com/{logo_path}"
-    hospital_symbol_path = f"https://mrb-association-files.s3.ap-south-1.amazonaws.com/{hospital_symbol_path}"
+    logo_path = f"https://storage.googleapis.com/{bucket_name}/{logo_path}"
+    hospital_symbol_path = f"https://storage.googleapis.com/{bucket_name}/{hospital_symbol_path}"
 
     logo_base64 = base64.b64encode(requests.get(logo_path).content).decode()
     symbol_base64 = base64.b64encode(requests.get(hospital_symbol_path).content).decode()
