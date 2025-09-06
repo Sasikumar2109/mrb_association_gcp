@@ -14,7 +14,7 @@ import io
 import constants
 from datetime import timedelta
 from urllib.parse import urlparse
-from google.auth.transport import requests
+from google.auth.transport import requests as google_requests
 from google.auth import default
 
 
@@ -26,11 +26,13 @@ bucket_name = os.getenv("GCP_BUCKET_NAME")
 
 def upload_file_to_gcs(bucket_name, file, destination_blob_name, make_public=False, expiration_minutes=300):
     credentials, project_id = default()
+    auth_request = google_requests.Request()
+    credentials.refresh(auth_request)
+
     storage_client = storage.Client(credentials=credentials)
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(destination_blob_name)
     
-
     # Upload file
     blob.upload_from_file(file, rewind=True)
 
@@ -101,7 +103,8 @@ def generate_signed_url(file_url: str, expiration=3600):
     expiration: time in seconds (default 1 hour)
     """
     credentials, project_id = default()
-
+    auth_request = google_requests.Request()
+    credentials.refresh(auth_request)
 
     parsed = urlparse(file_url)
     # parsed.path looks like "/bucket-name/path/to/file"
