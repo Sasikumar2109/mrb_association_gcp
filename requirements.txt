@@ -18,3 +18,4 @@ cloud-sql-python-connector==1.18.2
 pg8000==1.31.2
 SQLAlchemy==2.0.38
 boto3==1.40.24
+google-auth==2.40.3

@@ -14,6 +14,8 @@ import io
 import constants
 from datetime import timedelta
 from urllib.parse import urlparse
+from google.auth.transport import requests
+from google.auth import default
 
 
 load_dotenv()
@@ -21,18 +23,13 @@ load_dotenv()
 machine = os.getenv("MACHINE")
 bucket_name = os.getenv("GCP_BUCKET_NAME")
 
-def upload_file_to_gcs(bucket_name, file, destination_blob_name):
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(destination_blob_name)
-    blob.upload_from_file(file,rewind=True)
-    return blob.public_url
-
 
 def upload_file_to_gcs(bucket_name, file, destination_blob_name, make_public=False, expiration_minutes=300):
-    storage_client = storage.Client()
+    credentials, project_id = default()
+    storage_client = storage.Client(credentials=credentials)
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(destination_blob_name)
+    
 
     # Upload file
     blob.upload_from_file(file, rewind=True)
@@ -46,7 +43,9 @@ def upload_file_to_gcs(bucket_name, file, destination_blob_name, make_public=Fal
         url = blob.generate_signed_url(
             version="v4",
             expiration=timedelta(minutes=expiration_minutes),
-            method="GET"
+            method="GET",
+            service_account_email=credentials.service_account_email,
+            access_token=credentials.token,
         )
         return url
 
@@ -101,16 +100,26 @@ def generate_signed_url(file_url: str, expiration=3600):
     file_url: full https://storage.googleapis.com/bucket/path/file.pdf
     expiration: time in seconds (default 1 hour)
     """
+    credentials, project_id = default()
+
+
     parsed = urlparse(file_url)
     # parsed.path looks like "/bucket-name/path/to/file"
     parts = parsed.path.lstrip("/").split("/", 1)
     bucket_name, blob_name = parts[0], parts[1]
 
-    storage_client = storage.Client()
+    storage_client = storage.Client(credentials=credentials)
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(blob_name)
 
-    url = blob.generate_signed_url(expiration=expiration)
+    url = blob.generate_signed_url(
+        version="v4",
+        expiration=expiration,
+        method="GET",
+        service_account_email=credentials.service_account_email,
+        access_token=credentials.token
+    )
+
     return url
 
 def download_document_pdf(label: str, file_path:str, machine: str):
