@@ -17,5 +17,4 @@ psycopg2-binary==2.9.10
 cloud-sql-python-connector==1.18.2
 pg8000==1.31.2
 SQLAlchemy==2.0.38
-psycopg2==2.9.10
 boto3==1.40.24
