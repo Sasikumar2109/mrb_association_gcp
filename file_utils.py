@@ -153,8 +153,12 @@ def download_document_pdf(label: str, file_path:str, machine: str):
     elif machine == "gcp":
         try:
             signed_url = generate_signed_url(file_path, expiration=600)
-            response = requests.get(signed_url)
+            response = requests.get(file_path)
             if response.status_code == 200:
+                st.download_button(label=f"Download {label}",data=response.content,file_name=file_path.split("/")[-1],mime="application/octet-stream")
+            elif response.status_code == 403 and "storage.googleapis.com" in file_path:
+                signed_url = generate_signed_url(file_path, expiration=600)
+                response = requests.get(signed_url)
                 st.download_button(label=f"Download {label}",data=response.content,file_name=file_path.split("/")[-1],mime="application/octet-stream")
             else:
                 st.error(f"Failed to download {label} from GCS.")
@@ -240,6 +244,7 @@ def get_image_reader(image_path_or_url):
                     return ImageReader(io.BytesIO(response.content))
         elif os.path.exists(image_path_or_url):
             return ImageReader(image_path_or_url)
+        
     except Exception as e:
         st.error(f"Unable to load image.")
     return None
