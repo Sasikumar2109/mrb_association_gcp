@@ -19,7 +19,7 @@ from urllib.parse import urlparse
 load_dotenv()
 
 machine = os.getenv("MACHINE")
-bucket_name = os.getenv("S3_BUCKET_NAME")
+bucket_name = os.getenv("GCP_BUCKET_NAME")
 
 def upload_file_to_gcs(bucket_name, file, destination_blob_name):
     storage_client = storage.Client()

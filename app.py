@@ -51,7 +51,13 @@ sub_term_path = constants.sub_term_path
 logo_path = 'data/icons/logo.png'
 hospital_symbol_path = 'data/icons/hospital_symbol.png'
 
-if machine!='local':
+if machine=='aws':
+    logo_path = f"https://mrb-association-files.s3.ap-south-1.amazonaws.com/{logo_path}"
+    hospital_symbol_path = f"https://mrb-association-files.s3.ap-south-1.amazonaws.com/{hospital_symbol_path}"
+
+    logo_base64 = base64.b64encode(requests.get(logo_path).content).decode()
+    symbol_base64 = base64.b64encode(requests.get(hospital_symbol_path).content).decode()
+if machine=='gcp':
     logo_path = f"https://mrb-association-files.s3.ap-south-1.amazonaws.com/{logo_path}"
     hospital_symbol_path = f"https://mrb-association-files.s3.ap-south-1.amazonaws.com/{hospital_symbol_path}"
 

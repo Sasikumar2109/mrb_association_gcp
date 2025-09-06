@@ -7,7 +7,7 @@ import boto3
 load_dotenv()
 
 machine = os.getenv("MACHINE")
-bucket_name = os.getenv("BUCKET_NAME")
+bucket_name = os.getenv("GCP_BUCKET_NAME")
 
 photo1_path = "data/optimized_association_photos/photo1.JPG"
 photo2_path = "data/optimized_association_photos/photo2.JPG"
@@ -90,7 +90,7 @@ elif machine=="gcp":
 aws_access_key = os.getenv("AWS_ACCESS_KEY")
 aws_secret_key = os.getenv("AWS_SECRECT_ACCESS")
 aws_region = os.getenv("AWS_REGION")
-bucket_name = os.getenv("S3_BUCKET_NAME")
+s3_bucket_name = os.getenv("S3_BUCKET_NAME")
 
 
 s3 = boto3.client(
