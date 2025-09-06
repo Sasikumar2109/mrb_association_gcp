@@ -35,7 +35,7 @@ def get_connection():
             cursor_factory=RealDictCursor
         )
     else:
-        conn = psycopg2.connect(db_url)
+        conn = psycopg2.connect(db_url,cursor_factory=RealDictCursor)
     return conn
 
 # creating tables
