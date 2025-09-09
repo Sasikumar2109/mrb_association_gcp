@@ -8,6 +8,7 @@ from database import init_db, get_association_info, update_association_info
 # init_db()
 
 import auth
+import pandas as pd
 import otp_utils
 import pdf_utils
 from pathlib import Path
@@ -32,6 +33,7 @@ import file_utils
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import database
+import io
 
 load_dotenv()
 
@@ -1761,11 +1763,11 @@ def update_profile_page():
                 doc_name = passport_photo.name
                 passport_photo_path = file_utils.upload_file(passport_photo,doc_name,subfolder,type,user_id)
         
-        if rnrm_doc is not None and rnrm_doc.size > 1 * 300 * 300:
-            st.error("RNRM Document file size should not exceed 1MB.")
+        if rnrm_doc is not None and rnrm_doc.size > 500 * 1020:
+            st.error("RNRM Document file size should not exceed 500KB.")
             file_error = True
-        if aadhaar_doc is not None and aadhaar_doc.size > 1 * 300 * 300:
-            st.error("Aadhaar Document file size should not exceed 1MB.")
+        if aadhaar_doc is not None and aadhaar_doc.size > 500 * 1024:
+            st.error("Aadhaar Document file size should not exceed 500KB.")
             file_error = True
         phone_error = False
         aadhaar_error = False
@@ -1805,14 +1807,14 @@ def update_profile_page():
             else:
                 #GCP Update
 
-                if rnrm_doc is not None and rnrm_doc.size <= 1 * 300 * 300:
+                if rnrm_doc is not None and rnrm_doc.size <= 500 * 1024:
                     subfolder = sub_rnrm_path
                     type = 'user_aadhar'
                     user_id = email
                     doc_name = rnrm_doc.name
                     rnrm_doc_path = file_utils.upload_file(rnrm_doc,doc_name,subfolder,type,user_id)
 
-                if aadhaar_doc is not None and aadhaar_doc.size <= 1 * 300 * 300:
+                if aadhaar_doc is not None and aadhaar_doc.size <= 500 * 1024:
                     subfolder = sub_aadhar_path
                     type = 'user_aadhar'
                     user_id = email
@@ -2269,8 +2271,8 @@ def admin_dashboard():
     # Sidebar navigation
     admin_menu = option_menu(
         menu_title=None,
-        options=["Home", "Pending Users", "Approved Users", "Association Info", "Account", "Logout"],
-        icons=["house", "hourglass-split", "check-circle", "building", "person-circle", "box-arrow-right"],
+        options=["Home", "Pending Users", "Approved Users", "Association Info", "Account", "Data","Logout"],
+        icons=["house", "hourglass-split", "check-circle", "building", "person-circle", "database","box-arrow-right"],
         orientation="horizontal",
         styles={
             "container": {"background": "#f5f7fa", "padding": "1.5em 1em 1.5em 1em", "border-radius": "12px", "border": "2px solid #e0e0e0", "width": "100%", "margin-bottom": "1.5em"},
@@ -2525,6 +2527,67 @@ def admin_dashboard():
     # Account
     elif admin_menu == "Account":
         account_page()
+
+    elif admin_menu == "Data":
+        
+        st.title("📊 Data from Database")
+        table_name = "users"
+        st.write(f"Showing records from **{table_name}**")
+        try:
+            conn = database.get_connection()
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT * FROM {table_name}")  # limit rows
+            rows = cursor.fetchall()
+            if rows:
+                df = pd.DataFrame(rows)
+                st.dataframe(df)
+
+                # ---- CSV Download ----
+                csv = df.to_csv(index=False).encode("utf-8")
+                if st.download_button(
+                    label="⬇️ Download CSV",
+                    data=csv,
+                    file_name=f"{table_name}.csv",
+                    mime="text/csv"):
+
+                    st.success("✅ Data downloaded successfully as CSV")
+
+                # ---- Excel Download ----
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine="openpyxl") as writer:
+                    df.to_excel(writer, index=False, sheet_name="Sheet1")
+                excel_data = output.getvalue()
+
+                if  st.download_button(
+                    label="⬇️ Download Excel",
+                    data=excel_data,
+                    file_name=f"{table_name}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",):
+                    st.success("✅ Data downloaded successfully as Excel")
+
+                # ---- Delete All Data ----
+                st.subheader("Delete Data from Table")
+                if st.button("🗑️ Delete ALL Data from Table"):
+                    st.markdown("Are you sure you want to delete all data?")
+                    
+                    if st.button("Delete"):
+                        cursor.execute(f"DELETE FROM {table_name} where is_admin==0")
+                        conn.commit()
+                        st.success("✅ All data deleted successfully.")
+                    elif st.button("Cancel"):
+                        st.success("Deletion cancelled.")
+
+            else:
+                st.warning("No data found.")
+
+        except Exception as e:
+            st.error(f"Database error: {e}")
+        finally:
+            if 'cur' in locals():
+                cursor.close()
+            if 'conn' in locals():
+                conn.close()        
+
     # Logout
     elif admin_menu == "Logout":
         st.warning("Are you sure you want to log out?")
@@ -2596,8 +2659,8 @@ def admin_association_info_page():
         assoc_email_in = st.text_input("Association Email", key=widget_key('assoc_email_in'))
         terms_file = st.file_uploader("Terms and Conditions (PDF)", type=["pdf"], help="Upload a PDF file for Terms and Conditions.")
         terms_file_error = False
-        if terms_file is not None and terms_file.size > 1 * 1024 * 1024:
-            st.error("Terms and Conditions file must be less than or equal to 1MB.")
+        if terms_file is not None and terms_file.size > 500 * 1024:
+            st.error("Terms and Conditions file must be less than or equal to 500KB.")
             terms_file_error = True
         submitted = st.form_submit_button("Update Association Info")
         if submitted:
