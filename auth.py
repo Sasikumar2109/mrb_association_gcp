@@ -1,15 +1,16 @@
 import bcrypt
 import sqlite3
-from database import get_connection
+from db_utils import get_connection
 import datetime
 import time
-import file_utils
 import os
+import file_utils
 from dotenv import load_dotenv
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from zoneinfo import ZoneInfo
 import pytz
+from database import execute_query
 
 
 load_dotenv()
@@ -37,7 +38,7 @@ def get_next_member_id():
     query = "SELECT member_id FROM users WHERE member_id LIKE ?"
     params = (f"{prefix}{year}%",)
 
-    file_utils.execute_query(cursor=c,query=query,params=params,machine=machine)
+    execute_query(cursor=c,query=query,params=params,machine=machine)
     rows = c.fetchall()
     rows = file_utils.convert_to_dict(c,rows)
 
@@ -67,7 +68,7 @@ def create_user(name, dob, email, phone, password_hash, is_admin=False, signatur
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'''
         params = (name, dob, email, phone, password_hash, 1 if is_admin else 0, member_id, 'not submitted', signature_path)
 
-        file_utils.execute_query(cursor=c,query=query,params=params,machine=machine)
+        execute_query(cursor=c,query=query,params=params,machine=machine)
 
         conn.commit()
         return True
@@ -87,7 +88,7 @@ def get_user_by_email(email, is_admin=None):
         query = 'SELECT * FROM users WHERE email = ? AND is_admin = ?'
         params = (email, is_admin)
 
-    file_utils.execute_query(cursor=c,query=query,params=params,machine=machine)
+    execute_query(cursor=c,query=query,params=params,machine=machine)
     
     user = c.fetchall()
     users = file_utils.convert_to_dict(c,user)
@@ -101,7 +102,7 @@ def set_user_verified(email, is_admin=0):
 
     query = 'UPDATE users SET is_verified = 1 WHERE email = ? AND is_admin = ?'
     params = (email, is_admin)
-    file_utils.execute_query(cursor=c,query=query,params=params,machine=machine)
+    execute_query(cursor=c,query=query,params=params,machine=machine)
     conn.commit()
     conn.close()
 
@@ -111,39 +112,83 @@ def set_user_password(email, password_hash, is_admin=0):
 
     query = 'UPDATE users SET password_hash = ? WHERE email = ? AND is_admin = ?'
     params = (password_hash, email, is_admin)
-    file_utils.execute_query(cursor=c,query=query,params=params,machine=machine)
+    execute_query(cursor=c,query=query,params=params,machine=machine)
     conn.commit()
     conn.close()
 
-def update_user_profile(email, designation, phone, aadhaar, workplace, rnrm_doc_path, rnrm_number, emergency_contact, college, educational_qualification, gender, blood_group, address, profile_status=None, photo_path=None, aadhaar_doc_path=None, signature_path=None):
+def update_user_profile(user_data):
+
+    email = user_data.email
+    designation = user_data.designation
+    phone = user_data.phone
+    aadhaar = user_data.aadhaar
+    workplace = user_data.workplace
+    rnrm_doc_path = user_data.rnrm_doc_path
+    rnrm_number = user_data.rnrm_number
+    emergency_contact = user_data.emergency_contact
+    college = user_data.college
+    educational_qualification = user_data.educational_qualification
+    gender = user_data.gender
+    blood_group = user_data.blood_group
+    door_number = user_data.door_number
+    street_name = user_data.street_name
+    village_name = user_data.village_name
+    post = user_data.post
+    taluk = user_data.taluk
+    district = user_data.district
+    state_name = user_data.state_name
+    pincode = user_data.pincode
+    address = user_data.address
+    profile_status = getattr(user_data,'profile_status',None)
+    photo_path = getattr(user_data,'photo_path',None)
+    aadhaar_doc_path = getattr(user_data,'aadhaar_doc_path',None)
+    signature_path = getattr(user_data,'signature_path',None)
+
     conn = get_connection()
-    
     c = conn.cursor()
     now_str = None
+
     try:
         now_str = datetime.datetime.now(ZoneInfo('Asia/Kolkata')).strftime('%Y-%m-%d %H:%M:%S')
     except ImportError:
-
         now_str = datetime.datetime.now(pytz.timezone('Asia/Kolkata')).strftime('%Y-%m-%d %H:%M:%S')
 
     if profile_status is not None:
-        if profile_status == 'pending':
-            query = '''UPDATE users SET designation = ?, phone = ?, aadhaar = ?, workplace = ?, rnrm_doc_path = ?, rnrm_number = ?, emergency_contact = ?, college = ?,
-            educational_qualification = ?, gender = ?, blood_group = ?, address = ?, profile_status = ?, photo_path = ?, aadhaar_doc_path = ?, signature_path = ?, 
-            profile_submission_date = ? WHERE email = ? AND is_admin = 0'''
-            params = (designation, phone, aadhaar, workplace, rnrm_doc_path, rnrm_number, emergency_contact, college, educational_qualification, gender, blood_group, address, profile_status, photo_path, aadhaar_doc_path, signature_path, now_str, email)
-        else:
-            query = '''UPDATE users SET designation = ?, phone = ?, aadhaar = ?, workplace = ?, rnrm_doc_path = ?, rnrm_number = ?, emergency_contact = ?, college = ?,
-                    educational_qualification = ?, gender = ?, blood_group = ?, address = ?, profile_status = ?, photo_path = ?, aadhaar_doc_path = ?, signature_path = ?
-                    WHERE email = ? AND is_admin = 0'''
-            params = (designation, phone, aadhaar, workplace, rnrm_doc_path, rnrm_number, emergency_contact, college, educational_qualification, gender, blood_group, address, profile_status, photo_path, aadhaar_doc_path, signature_path, email)
-    else:
-        query = '''UPDATE users SET designation = ?, phone = ?, aadhaar = ?, workplace = ?, rnrm_doc_path = ?, rnrm_number = ?, emergency_contact = ?, college = ?,
-                educational_qualification = ?, gender = ?, blood_group = ?, address = ?, photo_path = ?, aadhaar_doc_path = ?, signature_path = ?
-                WHERE email = ? AND is_admin = 0''' 
-        params = (designation, phone, aadhaar, workplace, rnrm_doc_path, rnrm_number, emergency_contact, college, educational_qualification, gender, blood_group, address, photo_path, aadhaar_doc_path, signature_path, email)
+        query = '''UPDATE users SET 
+        designation = ?,
+        phone = ?,
+        aadhaar = ?,
+        workplace = ?,
+        rnrm_doc_path = ?,
+        rnrm_number = ?,
+        emergency_contact = ?,
+        college = ?,
+        educational_qualification = ?,
+        gender = ?,
+        blood_group = ?,
+        door_number = ?,
+        street_name = ?,
+        village_name = ?,
+        post = ?,
+        taluk = ?,
+        district = ?,
+        state_name = ?,
+        pincode = ?,
+        address = ?,
+        profile_status = ?,
+        photo_path = ?,
+        aadhaar_doc_path = ?,
+        signature_path = ?, 
+        profile_submission_date = ?
+        WHERE email = ? AND is_admin = 0'''
+
+        params = (designation, phone, aadhaar, workplace, rnrm_doc_path, rnrm_number,
+                    emergency_contact, college, educational_qualification, gender, blood_group,
+                    door_number, street_name, village_name, post, taluk, district, state_name,
+                    pincode, address, profile_status, photo_path, aadhaar_doc_path, signature_path, 
+                    now_str, email)
     
-    file_utils.execute_query(cursor=c,query=query,params=params,machine=machine)
+    execute_query(cursor=c,query=query,params=params,machine=machine)
     conn.commit()
     conn.close()
 
@@ -158,7 +203,7 @@ def approve_user_profile(email, approver_email=None):
         query = '''UPDATE users SET profile_status = 'approved', profile_approved_date = ? WHERE email = ? AND is_admin = 0''', 
         params = (now_str, email)
     
-    file_utils.execute_query(cursor=c,query=query,params=params,machine=machine)
+    execute_query(cursor=c,query=query,params=params,machine=machine)
 
     conn.commit()
     conn.close()
@@ -168,7 +213,7 @@ def update_signup_details(old_email, new_name, new_dob, new_email, new_phone):
     c = conn.cursor()
     query = '''UPDATE users SET name = ?, dob = ?, email = ?, phone = ? WHERE email = ? AND is_admin = 0'''
     params = (new_name, new_dob, new_email, new_phone, old_email)
-    file_utils.execute_query(cursor=c,query=query,params=params,machine=machine)
+    execute_query(cursor=c,query=query,params=params,machine=machine)
     conn.commit()
     conn.close()
 
@@ -177,7 +222,7 @@ def is_profile_pending(email, is_admin=0):
     c = conn.cursor()
     query = 'SELECT 1 FROM users WHERE email = ? AND is_admin = ? AND profile_status =?'
     params = (email, is_admin,'pending')
-    file_utils.execute_query(cursor=c,query=query,params=params,machine=machine)
+    execute_query(cursor=c,query=query,params=params,machine=machine)
     result = c.fetchone()
     conn.close()
     return result is not None 

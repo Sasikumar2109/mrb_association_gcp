@@ -4,7 +4,7 @@ import os
 import qrcode
 import tempfile
 from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import mm
+from reportlab.lib.pagesizes import mm, A4
 from reportlab.lib.utils import ImageReader
 from svglib.svglib import svg2rlg
 from reportlab.graphics import renderPDF
@@ -16,6 +16,18 @@ import re
 from PyPDF2 import PdfMerger
 import file_utils
 import constants
+from reportlab.pdfgen import canvas
+import auth
+from io import BytesIO
+from num2words import num2words
+import database
+from database import get_association_info
+
+
+logo_path = constants.logo_path
+hospital_symbol_path = constants.hospital_symbol_path
+
+
 #from file_utils import get_image_reader
 
 def draw_id_card_front(c, x_offset, y_offset, width, height, name, designation, dob, phone, blood_group, email, photo_path, address, member_id=None, rnrm_number=None, issue_date=None, nurse_signature_path=None, auth_signature_path=None):
@@ -47,6 +59,7 @@ def draw_id_card_front(c, x_offset, y_offset, width, height, name, designation, 
         x = logo_x + logo_w - x_offset + i * ((width - (logo_x + logo_w - x_offset)) / n_steps)
         c.setFillColor(colors.Color(r/255, g/255, b/255))
         c.rect(x_offset + x, y_offset + height - bar_height, (width - (logo_x + logo_w - x_offset)) / n_steps + 1, bar_height, fill=1, stroke=0)
+    
     # Draw logo at far left of bar
     logo_path = constants.logo_path
     logo_h = 10*mm
@@ -72,7 +85,7 @@ def draw_id_card_front(c, x_offset, y_offset, width, height, name, designation, 
     c.setFillColor(colors.white)
     c.drawCentredString(x_offset + width/2, text_y - 4*mm, 'REG.NO. 58/2022')
     # Draw hospital symbol icon (right side of top bar, below association name)
-    hospital_symbol_path = 'hospital_symbol.png'  # Path to your icon
+      # Path to your icon
     icon_w = 8*mm
     icon_h = 5*mm
     icon_x = x_offset + width - icon_w - 2*mm  # 4mm from right edge for more space
@@ -349,6 +362,7 @@ def generate_id_card_pdf_side_by_side(
         nurse_signature_path=nurse_signature_path,
         auth_signature_path=auth_signature_path
     )
+    
     # Prepare contact string
     if primary_contact and secondary_contact:
         assoc_contact = f"{primary_contact} / {secondary_contact}"
@@ -409,12 +423,7 @@ def generate_profile_pdf_with_disclaimers(
     profile_photo_path=None,
     auth_signature_path=None
 ):
-    from reportlab.lib.pagesizes import A4
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.units import mm
-    from reportlab.lib.utils import ImageReader
-    from reportlab.lib import colors
-    import os
+
     c = canvas.Canvas(output_path, pagesize=A4)
     width, height = A4
     y = height - 40
@@ -620,4 +629,165 @@ def generate_profile_pdf_with_disclaimers(
     c.setFont('Helvetica', 10)
     c.setFillColor(colors.HexColor('#555'))
     c.drawString(left, y, name)
-    c.save() 
+    c.save()
+
+
+
+def generate_payment_receipt(user_mail,approver,name,amount, city, payment_mode,bill_no, bill_date):
+
+    buffer = BytesIO()
+    assc_info = get_association_info()
+    
+    asscocation_name = assc_info.get('association_name','-')
+    assc_addr = assc_info.get('address','-')
+    assc_email = 'E-mail: ' + assc_info.get('email','-')
+    pri_contact = assc_info.get('primary_contact','-')
+    sec_contact = assc_info.get('secondary_contact','-')
+    assc_reg_no = assc_info.get('association_register_number','-')
+    assc_contact = "Phone : " + " | ".join([ str(pri_contact), str(sec_contact)])
+    assc_reg_txt = "REG.NO. " + str(assc_reg_no)
+    
+    logo_reader = file_utils.get_image_reader(logo_path)
+    hosp_symb_reader = file_utils.get_image_reader(hospital_symbol_path)
+    
+    bill_no = 'No. ' + str(bill_no)
+
+    bill_date = datetime.strptime(bill_date, '%Y-%m-%d %H:%M:%S').strftime('%d-%m-%Y')
+    bill_date = 'Date: ' + bill_date
+    
+    if approver and approver.get('signature_path'):
+        auth_signature_path = approver['signature_path']
+    
+    auth_sign_reader = file_utils.get_image_reader(auth_signature_path)
+    
+    name = name
+    amount = str(amount)
+    amount_txt = amount + " /-"
+    user_address = city
+    amount_word = num2words(int(float(amount)),lang='en_IN').capitalize() + " rupees only"
+    pay_mode = payment_mode
+    
+    #filename = 'payment_recipt.pdf'
+    rec_width, rec_height = 200*mm, 300*mm
+    c = canvas.Canvas(buffer,pagesize=A4)
+    
+    x_offset = 0
+    y_offset = 0
+    
+    logo_w = 10*mm
+    logo_x = x_offset + 1*mm
+    bar_height = 14*mm
+    
+    blue_color = colors.Color(25/255, 118/255, 210/255)  # #1976d2
+    
+    width, height = A4
+    
+    txt_ln = len(asscocation_name)
+    
+    init_height = 50
+    logo_h = 20*mm
+    logo_w = 20*mm
+    
+    c.drawImage(logo_reader, 10 , height - 70,logo_w , logo_h, mask='auto')
+    c.drawImage(hosp_symb_reader, width - 90 , height - 70,logo_w + 30 , logo_h, mask='auto')
+    
+    c.setFont("Helvetica-Bold", 23)
+    c.setFillColor(colors.darkblue)
+    c.drawCentredString(width/2, height - init_height , asscocation_name)
+    
+    c.setFont("Helvetica-Bold", 14)
+    c.setFillColor(colors.darkblue)
+    c.drawCentredString(width/2, height - (init_height + 24) , assc_reg_txt)
+    
+    c.setFont("Helvetica", 14)
+    c.setFillColor(colors.black)
+    c.drawCentredString(width/2, height - (init_height + 45) , assc_addr)
+    
+    c.setFont("Helvetica", 14)
+    c.setFillColor(colors.black)
+    c.drawCentredString(width/2, height - (init_height + 65) , assc_email)
+    
+    c.setFont("Helvetica-Bold", 14)
+    c.setFillColor(colors.black)
+    c.drawCentredString(width/2, height - (init_height + 85) , assc_contact)
+    
+    c.line(10, height - (init_height + 100), width-10, height - (init_height + 100))
+    
+    
+    txt_init_h = 90
+    
+    c.setFont("Helvetica-Bold", 18)
+    c.setFillColor(colors.black)
+    c.drawCentredString(width/2, height - (init_height + 140) , "Payment Receipt")
+    
+    
+    c.setFont("Helvetica-Bold", 14)
+    c.setFillColor(colors.black)
+    c.drawString(30, height - (txt_init_h + 140) , bill_no)
+    
+    c.setFont("Helvetica-Bold", 14)
+    c.setFillColor(colors.black)
+    c.drawString(width/1.3, height - (txt_init_h + 140) , bill_date)
+    
+    c.setFont("Helvetica", 14)
+    c.setFillColor(colors.black)
+    txt = "Received with thanks from :"
+    c.drawString(30, height - (txt_init_h + 180) , txt)
+    
+    c.setFont("Helvetica-Bold", 14)
+    c.setFillColor(colors.black)
+    c.drawString(width/2.5, height - (txt_init_h + 180), name) 
+    
+
+    c.setFont("Helvetica", 14)
+    c.setFillColor(colors.black)
+    txt = "Address :"
+    c.drawString(30, height - (txt_init_h + 210) , txt)
+    
+    c.setFont("Helvetica-Bold", 14)
+    c.setFillColor(colors.black)
+    c.drawString(width/2.5, height - (txt_init_h + 210), user_address) 
+    
+    c.setFont("Helvetica", 14)
+    c.setFillColor(colors.black)
+    txt = "Amount :"
+    c.drawString(30, height - (txt_init_h + 240) , txt)
+    
+    c.setFont("Helvetica-Bold", 14)
+    c.setFillColor(colors.black)
+    c.drawString(width/2.5, height - (txt_init_h + 240), amount_txt) 
+    
+    
+    c.setFont("Helvetica", 14)
+    c.setFillColor(colors.black)
+    txt = "Amount in word :"
+    c.drawString(30, height - (txt_init_h + 270) , txt)
+    
+    c.setFont("Helvetica-Bold", 14)
+    c.setFillColor(colors.black)
+    c.drawString(width/2.5, height - (txt_init_h + 270), amount_word)
+    
+    c.setFont("Helvetica", 14)
+    c.setFillColor(colors.black)
+    txt = "Payment Mode :"
+    c.drawString(30, height - (txt_init_h + 300) , txt)
+    
+    c.setFont("Helvetica-Bold", 14)
+    c.setFillColor(colors.black)
+    c.drawString(width/2.5, height - (txt_init_h + 300), pay_mode)
+    
+    
+    c.setFont("Helvetica", 14)
+    c.setFillColor(colors.black)
+    txt = "Authority Signature"
+    c.drawString(width - 230, height - (txt_init_h + 400) , txt)
+    
+    c.drawImage(auth_sign_reader, width - 250 , height - (txt_init_h + 490), 200 ,80, mask='auto')
+    
+    c.setFont("Helvetica-Bold", 14)
+    c.setFillColor(colors.black)
+    txt = "For " + asscocation_name
+    c.drawString(width - 300, height - (txt_init_h + 510),txt )
+    c.save()
+    buffer.seek(0)
+    return buffer

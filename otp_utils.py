@@ -7,6 +7,7 @@ import os
 import file_utils
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from database import execute_query
 
 load_dotenv()
 
@@ -45,7 +46,7 @@ def store_otp(email, otp, purpose):
     c = conn.cursor()
     query = 'INSERT INTO otps (email, otp, purpose) VALUES (?, ?, ?)'
     params = (email, otp, purpose)
-    file_utils.execute_query(cursor=c,query=query,params=params,machine=machine)
+    execute_query(cursor=c,query=query,params=params,machine=machine)
     conn.commit()
     conn.close()
 
@@ -56,7 +57,7 @@ def verify_otp(email, otp, purpose):
 
     query = 'SELECT id, otp FROM otps WHERE email = ? AND purpose = ? ORDER BY id DESC LIMIT 1'
     params = (email, purpose)
-    file_utils.execute_query(cursor=c,query=query,params=params,machine=machine)
+    execute_query(cursor=c,query=query,params=params,machine=machine)
 
     row = c.fetchall() # fetchone to fetchall
     rows = file_utils.convert_to_dict(c,row)
@@ -65,7 +66,7 @@ def verify_otp(email, otp, purpose):
     if row and row['otp'] == otp:
         query = 'DELETE FROM otps WHERE email = ? AND purpose = ?'
         params = (email, purpose)
-        file_utils.execute_query(cursor=c,query=query,params=params,machine=machine)
+        execute_query(cursor=c,query=query,params=params,machine=machine)
         conn.commit()
         conn.close()
         return True

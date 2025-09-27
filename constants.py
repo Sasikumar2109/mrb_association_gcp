@@ -9,16 +9,16 @@ load_dotenv()
 machine = os.getenv("MACHINE")
 bucket_name = os.getenv("GCP_BUCKET_NAME")
 
-photo1_path = "data/optimized_association_photos/photo1.JPG"
-photo2_path = "data/optimized_association_photos/photo2.JPG"
-photo3_path = "data/optimized_association_photos/photo3.JPG"
-photo4_path = "data/optimized_association_photos/photo4.JPG"
-photo5_path = "data/optimized_association_photos/photo5.JPG"
-photo6_path = "data/optimized_association_photos/photo6.JPG"
-photo7_path = "data/optimized_association_photos/photo7.JPG"
+photo1_path = "data/optimized_association_photos/photo1.jpg"
+photo2_path = "data/optimized_association_photos/photo2.jpg"
+photo3_path = "data/optimized_association_photos/photo3.jpg"
+photo4_path = "data/optimized_association_photos/photo4.jpg"
+photo5_path = "data/optimized_association_photos/photo5.jpg"
+photo6_path = "data/optimized_association_photos/photo6.jpg"
+photo7_path = "data/optimized_association_photos/photo7.jpg"
 photo8_path = "data/optimized_association_photos/photo8.jpg"
-photo9_path = "data/optimized_association_photos/photo9.JPG"
-photo10_path = "data/optimized_association_photos/photo10.JPG"
+photo9_path = "data/optimized_association_photos/photo9.jpg"
+photo10_path = "data/optimized_association_photos/photo10.jpg"
 
 logo_path = 'data/icons/logo.png'
 hospital_symbol_path = 'data/icons/hospital_symbol.png'
@@ -30,15 +30,15 @@ sub_term_path = 'data/documents/terms_and_conditions'
 
 if machine=="local":
     photo1 = photo1_path
-    photo2 = photo1_path
-    photo3 = photo1_path
-    photo4 = photo1_path
-    photo5 = photo1_path
-    photo6 = photo1_path
-    photo7 = photo1_path
-    photo8 = photo1_path
-    photo9 = photo1_path
-    photo10 = photo1_path
+    photo2 = photo2_path
+    photo3 = photo3_path
+    photo4 = photo4_path
+    photo5 = photo5_path
+    photo6 = photo6_path
+    photo7 = photo7_path
+    photo8 = photo8_path
+    photo9 = photo9_path
+    photo10 = photo10_path
 
 elif machine=="aws":
     photo1 = f"https://mrb-association-files.s3.ap-south-1.amazonaws.com/{photo1_path}"
@@ -99,3 +99,5 @@ s3 = boto3.client(
     aws_secret_access_key=aws_secret_key,
     region_name=aws_region
 )
+
+

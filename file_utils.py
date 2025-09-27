@@ -67,13 +67,7 @@ def upload_file(file_obj,doc_name,subfolder,type,user_id):
         file_path = f"{subfolder}/{type}_{user_id}_{doc_name}"
         blob_path = upload_file_to_gcs(bucket_name, file_obj,file_path)
         return blob_path
-    
-def execute_query(cursor,query,params=None,machine=None):
-    if params:
-        query = query.replace('?','%s')
-        cursor.execute(query,params)
-    else:
-        cursor.execute(query)
+
 
 def convert_to_dict(cursor, rows):
     if not rows:

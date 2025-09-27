@@ -27,7 +27,10 @@ def optimize_images(input_dir, output_dir, target_width, target_height, quality=
     for filename in os.listdir(input_dir):
         if filename.lower().endswith(supported_formats):
             input_path = os.path.join(input_dir, filename)
-            output_path = os.path.join(output_dir, filename)
+
+            base_name, _ = os.path.splitext(filename)
+            output_filename = base_name + ".jpg"
+            output_path = os.path.join(output_dir, output_filename)
 
             try:
                 with Image.open(input_path) as img:
@@ -76,8 +79,8 @@ def optimize_images(input_dir, output_dir, target_width, target_height, quality=
 if __name__ == "__main__":
     # --- Configuration ---
     # IMPORTANT: Adjust these paths and dimensions as needed!
-    original_photos_dir = "association_photos"  # Your current photo directory
-    optimized_photos_dir = "optimized_association_photos" # New directory for optimized photos
+    original_photos_dir = "data/orginal_photos"  # Your current photo directory
+    optimized_photos_dir = "data/optimized_association_photos" # New directory for optimized photos
 
     # Target dimensions: All images will be exactly this size
     target_fixed_width = 600
