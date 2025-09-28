@@ -79,6 +79,87 @@ def admin_home_page():
     else:
         st.info("No user data to display yet.")
 
+def prepare_profile(user):
+    assoc_info = get_association_info()
+    if assoc_info is not None:
+        assoc_info = dict(assoc_info)
+    terms_file_path = assoc_info['terms_file_path'] if assoc_info and 'terms_file_path' in assoc_info.keys() else ''
+
+    name = user.get('name', '-')
+    designation = user.get('designation', '-')
+    dob = user.get('dob', '-')
+    phone = user.get('phone', '-')
+    blood_group = user.get('blood_group', '-')
+    email = user.get('email', '-')
+    photo_path = user.get('photo_path', '')
+    address = user.get('address', '-')
+    member_id = user.get('member_id', '-')
+    aadhaar = user.get('aadhaar', '-')
+    workplace = user.get('workplace', '-')
+    college = user.get('college', '-')
+    educational_qualification = user.get('educational_qualification', '-')
+    gender = user.get('gender', '-')
+    emergency_contact = user.get('emergency_contact', '-')
+    rnrm_number = user.get('rnrm_number', '-')
+    signature_path = user.get('signature_path', '')
+    disclaimer1_text = "I hereby declare that all the information provided above is true and correct to the best of my knowledge and belief."
+    disclaimer2_text = "I have read and accept the Terms and Conditions of the Association in second page of this document."
+    pdf_bytes = None
+    file_name = "profile_with_terms.pdf"
+    # Prepare association info for PDF
+    association_name = assoc_info.get('association_name', '') if assoc_info else ''
+    association_reg = assoc_info.get('association_register_number', '') if assoc_info else ''
+    association_email = assoc_info.get('email', '') if assoc_info else ''
+    primary_contact = assoc_info.get('primary_contact', '') if assoc_info else ''
+    secondary_contact = assoc_info.get('secondary_contact', '') if assoc_info else ''
+    profile_photo_path = photo_path
+    # Get authorized signature path if approved
+    auth_signature_path = None
+    user_profile_path = None
+    #if user.get('profile_status') == 'approved' and user.get('approved_by'):
+    if user:
+        approver = auth.get_user_by_email(user['approved_by'], is_admin=1)
+        if approver and approver.get('signature_path'):
+            auth_signature_path = approver['signature_path']
+
+        profile_data = {
+        'name' : name,
+        'designation': designation,
+        'dob':dob,
+        'phone':phone,
+        'email':email,
+        'address':address,
+        'member_id':member_id,
+        'aadhaar':aadhaar,
+        'workplace':workplace,
+        'college':college,
+        'educational_qualification':educational_qualification,
+        'blood_group':blood_group,
+        'gender':gender,
+        'emergency_contact':emergency_contact,
+        'rnrm_number':rnrm_number,
+        'disclaimer1_text':disclaimer1_text,
+        'disclaimer2_text':disclaimer2_text,
+        'signature_path':signature_path,
+        'association_name':association_name,
+        'association_reg':association_reg,
+        'association_email':association_email,
+        'primary_contact':primary_contact,
+        'secondary_contact':secondary_contact,
+        'profile_photo_path':profile_photo_path,
+        'auth_signature_path':auth_signature_path
+        }
+
+        print(profile_data)
+
+        profile_pdf = file_utils.create_profile(machine,terms_file_path,file_name,**profile_data)
+
+        subfolder = constants.sub_profile_path
+        type = 'user_profile'
+        user_id = email
+        doc_name = file_name
+        user_profile_path = file_utils.upload_file(profile_pdf,doc_name,subfolder,type,user_id)
+    return user_profile_path
 
 
 def admin_pending_user_page():
@@ -120,6 +201,7 @@ def admin_pending_user_page():
             if cols[4].button("Approve", key=f"approve_{user['email']}"):
                 admin_user = st.session_state.get('user', {})
                 approver_email = admin_user.get('email', None)
+                st.session_state['selected_user'] = user
                 payment_modal.open()
 
             reject_modal = Modal("Reject User Commands", key="reject_modal", max_width=1200)
@@ -152,50 +234,61 @@ def admin_pending_user_page():
                         if st.button("Close",key="close"):
                             reject_modal.close()
 
+            
             if payment_modal.is_open():
-                with payment_modal.container():
-                    options = ["","Online","Cash"]
-                    payment_mode = st.selectbox("Select Payment Mode:",options)
+                user = st.session_state.get('selected_user')
+                
+                if not user:
+                    st.error("No user selected")
+                else:
+                    with payment_modal.container():
+                        options = ["","Online","Cash"]
+                        payment_mode = st.selectbox("Select Payment Mode:",options)
 
-                    # 2. Dynamic fields based on mode
-                    if payment_mode == "Online":
-                        payment_amount = st.number_input("Enter Payment Amount")
-                        paid_to = st.text_input("Paid To (Name)")
-                        transaction_id = st.text_input("Transaction ID")
-                        payment_date = st.date_input("Date of Payment", datetime.today().date())
-                        #times = [(datetime(2000,1,1,0,0) + timedelta(minutes=i)).strftime("%H:%M") for i in range(24*60)]
-                        #payment_time = st.selectbox("Time of Payment", times, index=times.index(datetime.now().strftime("%H:%M")))
-                        payment_remarks = st.text_input("Remarks")
+                        # 2. Dynamic fields based on mode
+                        if payment_mode == "Online":
+                            payment_amount = st.number_input("Enter Payment Amount")
+                            paid_to = st.text_input("Paid To (Name)")
+                            transaction_id = st.text_input("Transaction ID")
+                            payment_date = st.date_input("Date of Payment", datetime.today().date())
+                            #times = [(datetime(2000,1,1,0,0) + timedelta(minutes=i)).strftime("%H:%M") for i in range(24*60)]
+                            #payment_time = st.selectbox("Time of Payment", times, index=times.index(datetime.now().strftime("%H:%M")))
+                            payment_remarks = st.text_input("Remarks")
 
-                    elif payment_mode == 'Cash':
-                        payment_amount = st.number_input("Enter Payment Amount")
-                        paid_to = st.text_input("Cash Received By (Name)")
-                        payment_date = st.date_input("Date of Payment", datetime.today().date())
-                        payment_remarks = st.text_input("Remarks")
-                        transaction_id = ""
+                        elif payment_mode == 'Cash':
+                            payment_amount = st.number_input("Enter Payment Amount")
+                            paid_to = st.text_input("Cash Received By (Name)")
+                            payment_date = st.date_input("Date of Payment", datetime.today().date())
+                            payment_remarks = st.text_input("Remarks")
+                            transaction_id = ""
 
-                    if payment_mode != "":
-                        c1,c2,c3 = st.columns(3)
-                        
-                        with c1:
-                            if st.button("Submit and Approve"):
-                                admin_user = st.session_state.get('user', {})
-                                approver_email = admin_user.get('email', None)
+                        if payment_mode != "":
+                            c1,c2,c3 = st.columns(3)
+                            
+                            with c1:
+                                if st.button("Submit and Approve"):
+                                    admin_user = st.session_state.get('user', {})
+                                    approver_email = admin_user.get('email', None)
 
-                                query = "UPDATE users SET payment_mode = ?, payment_amount = ?, paid_to = ?, transaction_id = ?, payment_date = ? , pament_remarks = ? WHERE email = ? AND is_admin = 0"
-                                params = (payment_mode,payment_amount , paid_to, transaction_id, payment_date, payment_remarks ,user['email'],)
-                                execute_query(cursor=c,query=query,params=params,machine=machine)
-                                conn.commit()
+                                    query = "UPDATE users SET payment_mode = ?, payment_amount = ?, paid_to = ?, transaction_id = ?, payment_date = ? , pament_remarks = ? WHERE email = ? AND is_admin = 0"
+                                    params = (payment_mode,payment_amount , paid_to, transaction_id, payment_date, payment_remarks ,user['email'],)
+                                    execute_query(cursor=c,query=query,params=params,machine=machine)
+                                    conn.commit()
 
-                                auth.approve_user_profile(user['email'], approver_email=approver_email)
+                                    auth.approve_user_profile(user['email'], approver_email=approver_email)
 
-                                st.success("User approved!")
-                                payment_modal.close()
-                                st.rerun()
-                        with c2:
-                            if st.button("Close"):
-                                payment_modal.close()
+                                    st.success("User approved!")
+                                    profile_path = prepare_profile(user=user)
+                                    query = "UPDATE users SET profile_path = ? WHERE email = ? AND is_admin = 0"
+                                    params = (profile_path ,user['email'],)
+                                    execute_query(cursor=c,query=query,params=params,machine=machine)
+                                    conn.commit()
 
+                                    payment_modal.close()
+                                    st.rerun()
+                            with c2:
+                                if st.button("Close"):
+                                    payment_modal.close()
 
                 
             if modal.is_open():
@@ -273,16 +366,17 @@ def admin_approved_user_page():
         st.info("No approved users.")
     else:
         # Table header
-        cols = st.columns([2, 2, 3, 2, 2])
+        cols = st.columns([2, 2, 3, 2, 2,2])
         cols[0].markdown("**Name**")
         cols[1].markdown("**Member ID**")
         cols[2].markdown("**Email**")
         cols[3].markdown("**View Profile**")
         cols[4].markdown("**Action**")
+        cols[5].markdown("**Profile**")
 
         # Table rows
         for i, user in enumerate(approved_users):
-            cols = st.columns([2, 2, 3, 2, 2])
+            cols = st.columns([2, 2, 3, 2, 2,2])
             cols[0].write(user['name'])
             cols[1].write(user['member_id'])
             cols[2].write(user['email'])
@@ -290,6 +384,7 @@ def admin_approved_user_page():
             modal = Modal(f"Profile for {user['name']}", key=f"modal_approved_{user['email']}", max_width=700, padding=20)
             if cols[3].button("View", key=f"approved_view_{user['email']}"):
                 modal.open()
+
             remove_btn = cols[4].button("Remove", key=f"remove_{user['email']}")
             if remove_btn:
                 query = "DELETE FROM users WHERE email = ? AND is_admin = 0"
@@ -298,6 +393,20 @@ def admin_approved_user_page():
                 conn.commit()
                 st.warning("User removed!")
                 st.rerun()
+
+            with cols[5]:  
+                profile_path = user.get('profile_path','')
+                
+                if profile_path and os.path.exists(profile_path):
+                    # PDF exists → provide bytes to download
+                    with open(profile_path, "rb") as f:
+                       pdf_bytes = f.read()
+
+                    st.download_button(label="Download Profile",data=pdf_bytes,file_name=f"{user['email']}_profile.pdf",mime="application/pdf")
+                else:
+                    # PDF missing → provide empty data, disabled button, and show warning
+                    st.download_button(label="Download Profile",data=b"",file_name=f"{user['email']}_profile.pdf",mime="application/pdf",disabled=True)
+
             
             if modal.is_open():
                 with modal.container():

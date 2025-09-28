@@ -27,6 +27,7 @@ sub_photo_path = 'uploads/photo'
 sub_rnrm_path = 'uploads/rnrm'
 sub_aadhar_path = 'uploads/aadhar'
 sub_term_path = 'data/documents/terms_and_conditions'
+sub_profile_path = 'uploads/profile'
 
 if machine=="local":
     photo1 = photo1_path

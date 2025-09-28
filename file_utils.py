@@ -13,6 +13,9 @@ from reportlab.lib.utils import ImageReader
 import io
 import constants
 from datetime import timedelta
+import shutil
+from io import BytesIO
+import database
 
 load_dotenv()
 
@@ -59,6 +62,7 @@ def upload_file(file_obj,doc_name,subfolder,type,user_id):
         with open(file_path, "wb") as f:
             f.write(file_obj.getbuffer())
         return file_path
+    
     elif machine=="aws":
         file_path = f"{subfolder}/{type}_{user_id}_{doc_name}"
         blob_path = upload_file_to_s3(bucket_name, file_obj,file_path)
@@ -158,7 +162,7 @@ def generate_and_download_profile_pdf(machine, terms_file_path, file_name, **pro
     # Step 4: Clean up
     os.remove(base_pdf_path)
     if terms_path_resolved and terms_path_resolved != terms_file_path:
-        os.remove(terms_path_resolved)  # clean up downloaded GCS file
+        os.remove(terms_path_resolved) 
 
     # Step 5: Download Button
     download_clicked = st.download_button(
@@ -167,6 +171,7 @@ def generate_and_download_profile_pdf(machine, terms_file_path, file_name, **pro
         file_name=file_name,
         mime="application/pdf"
     )
+
     if download_clicked:
         st.session_state['profile_downloaded'] = True
         st.session_state['profile_downloaded_time'] = time.time()
@@ -178,6 +183,37 @@ def generate_and_download_profile_pdf(machine, terms_file_path, file_name, **pro
             st.success("Profile downloaded successfully!")
         else:
             st.session_state['profile_downloaded'] = False
+
+def create_profile(machine, terms_file_path, file_name, **profile_kwargs):
+
+    # Step 1: Generate profile PDF
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmpfile:
+        pdf_utils.generate_profile_pdf_with_disclaimers(tmpfile.name, **profile_kwargs)
+        tmpfile.flush()
+        base_pdf_path = tmpfile.name
+
+    # Step 2: Handle terms file (local or GCS URL)
+    terms_path_resolved = download_file_if_url(terms_file_path) if terms_file_path else None
+
+    # Step 3: Merge if needed
+    if terms_path_resolved:
+        merger = PyPDF2.PdfMerger()
+        merger.append(base_pdf_path)
+        merger.append(terms_path_resolved)
+        merged_path = base_pdf_path.replace(".pdf", "_merged.pdf")
+        merger.write(merged_path)
+        merger.close()
+        final_path = merged_path
+    else:
+        final_path = base_pdf_path
+
+    with open(final_path, "rb") as f:
+        pdf_bytes = f.read()
+
+    file_obj = BytesIO(pdf_bytes)
+
+    return file_obj
+
 
 
 def get_image_reader(image_path_or_url):

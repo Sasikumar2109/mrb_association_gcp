@@ -8,9 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from db_utils import get_connection
-import file_utils
 machine = os.getenv("MACHINE")
-
 
 def execute_query(cursor,query,params=None,machine=None):
     if params:
@@ -47,12 +45,19 @@ def update_association_info(association_name, association_register_number, prima
     conn.commit()
     conn.close()
 
+def convert_to_dict(cursor, rows):
+    if not rows:
+        result = []
+    else:
+        result = rows
+    return result
+
 def get_association_info():
     conn = get_connection()
     c = conn.cursor()
     c.execute('SELECT * FROM association_info WHERE id = 1')
     row = c.fetchall() #changes
-    rows = file_utils.convert_to_dict(c,row)
+    rows = convert_to_dict(c,row)
     row = rows[0] if rows else None
     conn.close()
     return row

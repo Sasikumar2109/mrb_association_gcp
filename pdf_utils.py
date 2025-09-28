@@ -27,6 +27,19 @@ from database import get_association_info
 logo_path = constants.logo_path
 hospital_symbol_path = constants.hospital_symbol_path
 
+assoc = get_association_info()
+if assoc:
+    assoc_name = assoc['association_name']
+    assoc_reg = assoc['association_register_number']
+    primary_contact = assoc['primary_contact']
+    secondary_contact = assoc['secondary_contact']
+    address = assoc['address']
+    assoc_email = assoc['email'] if 'email' in assoc.keys() else ''
+    terms_file_path = assoc['terms_file_path']
+    last_update_by = assoc['last_update_by']
+    last_updated_at = assoc['last_updated_at']
+
+    assoc_reg_no = "REG.NO. " + str(assoc_reg)
 
 #from file_utils import get_image_reader
 
@@ -74,7 +87,7 @@ def draw_id_card_front(c, x_offset, y_offset, width, height, name, designation, 
 
     # Draw association name next to logo, vertically centered
     assoc_font_size = 6.5
-    assoc_text = 'MRB COVID NURSES ASSOCIATION'
+    assoc_text = assoc_name
     c.setFont('Helvetica-Bold', assoc_font_size)
     c.setFillColor(colors.white)
     text_x = logo_x + logo_w + 1*mm
@@ -83,7 +96,7 @@ def draw_id_card_front(c, x_offset, y_offset, width, height, name, designation, 
     # Add '58/2022' below the association name, centered
     c.setFont('Helvetica', 6)
     c.setFillColor(colors.white)
-    c.drawCentredString(x_offset + width/2, text_y - 4*mm, 'REG.NO. 58/2022')
+    c.drawCentredString(x_offset + width/2, text_y - 4*mm, assoc_reg_no)
     # Draw hospital symbol icon (right side of top bar, below association name)
       # Path to your icon
     icon_w = 8*mm
@@ -304,7 +317,7 @@ def draw_id_card_back(c, x_offset, y_offset, width, height, name, designation, d
             line_y -= line_height
             c.drawString(value_x, line_y, l)
     # Association name and address in bottom bar, centered and wrapped
-    assoc_text = "MRB COVID NURSES ASSOCIATION"
+    assoc_text = assoc_name
     # Use provided association address, contact, and email
     assoc_addr = assoc_addr or "-"
     assoc_contact = assoc_contact or "-"
@@ -434,6 +447,17 @@ def generate_profile_pdf_with_disclaimers(
     value_style = ('Helvetica', 11)
     line_gap = 22
     # --- Association Info Header ---
+
+    logo_reader = file_utils.get_image_reader(logo_path)
+    hosp_symb_reader = file_utils.get_image_reader(hospital_symbol_path)
+
+    logo_h = 25*mm
+    logo_w = 25*mm
+
+    c.drawImage(logo_reader, 30 , height - 90,logo_w , logo_h, mask='auto')
+    c.drawImage(hosp_symb_reader, width - 130 , height - 90,logo_w + 30 , logo_h, mask='auto')
+
+
     c.setFont('Helvetica-Bold', 15)
     c.setFillColor(colors.HexColor('#1a237e'))
     c.drawCentredString(center, y, association_name or "Association Name")
@@ -452,8 +476,9 @@ def generate_profile_pdf_with_disclaimers(
     # --- Line Separator ---
     c.setStrokeColor(colors.HexColor('#1976d2'))
     c.setLineWidth(1.2)
-    c.line(left, y, right, y)
+    c.line(left-30, y, right+30, y)
     y -= 28
+
     # --- Membership Form Heading ---
     c.setFont('Helvetica-Bold', 14)
     c.setFillColor(colors.HexColor('#1976d2'))
