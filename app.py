@@ -647,7 +647,7 @@ def signup_page():
 
     if st.session_state.get('show_signup_success'):
         st.success("Registration successful! You can now log in.")
-        time.sleep(5)
+        time.sleep(2)
         st.session_state.show_signup_success = False
         st.rerun()
 
@@ -1065,13 +1065,15 @@ def admin_login_page():
             st.session_state.admin_signup_reset_key = 0
         if 'admin_signup_success' not in st.session_state:
             st.session_state.admin_signup_success = False
+        if 'admin_signature_file' not in st.session_state:
+            st.session_state.admin_signature_file = None
 
         st.markdown("<h4 style='margin-bottom: 0.3em;'>Register New Admin</h4>", unsafe_allow_html=True)
 
         # --- Success message and reset after 4 seconds ---
         if st.session_state.admin_signup_success:
             st.success("Admin registration successful! You can now log in.")
-            time.sleep(4)
+            time.sleep(2)
             st.session_state.admin_signup_otp_sent = False
             st.session_state.admin_signup_otp_verified = False
             st.session_state.admin_signup_email = ''
@@ -1094,25 +1096,14 @@ def admin_login_page():
             phone = st.text_input("Phone Number *", value="", key=f"admin_signup_phone_{st.session_state.admin_signup_reset_key}", disabled=st.session_state.admin_signup_otp_sent)
             password = st.text_input("Password *", value="", type="password", key=f"admin_signup_password_{st.session_state.admin_signup_reset_key}", disabled=st.session_state.admin_signup_otp_sent)
             admin_code = st.text_input("Admin Code *", value="", type="password", key=f"admin_signup_code_{st.session_state.admin_signup_reset_key}", disabled=st.session_state.admin_signup_otp_sent)
-            signature_file = st.file_uploader("Signature (PNG/JPG, max 200KB)", type=["png", "jpg", "jpeg"], key=f"admin_signup_signature_{st.session_state.admin_signup_reset_key}", disabled=st.session_state.admin_signup_otp_sent)
-            signature_path = ''
-            signature_error = False
-            if signature_file is not None:
-                if signature_file.size > 200 * 1024:
-                    st.error("Signature file must be less than or equal to 200KB.")
-                    signature_error = True
-                else:
-                    subfolder = sub_sign_path
-                    type = 'admin_signature'
-                    user_id = email
-                    doc_name = signature_file.name
-                    signature_path = file_utils.upload_file(signature_file,doc_name,subfolder,type,user_id)
+            
 
             col1, col2 = st.columns(2)
             with col1:
                 submit_info = st.form_submit_button("Request OTP", disabled=st.session_state.admin_signup_otp_sent or st.session_state.admin_signup_otp_loading)
             with col2:
                 reset = st.form_submit_button("Reset", disabled=st.session_state.admin_signup_otp_sent or st.session_state.admin_signup_otp_loading)
+
         if reset:
             st.session_state.admin_signup_reset_key += 1
             st.session_state.admin_signup_otp_sent = False
@@ -1123,6 +1114,8 @@ def admin_login_page():
             st.session_state.admin_signup_otp_resend_enabled = False
             st.session_state.admin_signup_success = False
             st.rerun()
+
+
         if submit_info:
             with st.spinner("Requesting OTP..."):
                 st.session_state.admin_signup_otp_loading = True
@@ -1149,8 +1142,6 @@ def admin_login_page():
                 elif auth.get_user_by_email(email, is_admin=1):
                     st.error("An admin account with this email already exists.")
                     st.session_state.admin_signup_otp_loading = False
-                elif signature_file is not None and signature_error:
-                    st.session_state.admin_signup_otp_loading = False
                 else:
                     otp = otp_utils.generate_otp()
                     sent = otp_utils.send_otp_email(email, otp)
@@ -1163,8 +1154,8 @@ def admin_login_page():
                             'dob': dob.strftime('%Y-%m-%d'),
                             'email': email,
                             'phone': phone,
-                            'password': password,
-                            'signature_path': signature_path
+                            'password': password
+                            #'signature_path': signature_path
                         }
                         st.session_state.admin_signup_otp_requested_time = time.time()
                         st.session_state.admin_signup_otp_resend_enabled = False
@@ -1231,24 +1222,55 @@ def admin_login_page():
                             st.session_state.admin_signup_otp_verified = False
                             st.error("Invalid OTP. Please try again.")
                             st.session_state.admin_signup_otp_loading = False
+
+            
             # Register button only if OTP is verified
             register_btn = None
+
             if st.session_state.admin_signup_otp_verified:
+                signature_file = st.file_uploader("Signature (PNG/JPG, max 200KB) *", type=["png", "jpg", "jpeg"], key=f"admin_signup_signature_{st.session_state.admin_signup_reset_key}", disabled=not st.session_state.admin_signup_otp_verified)
+                signature_error = False
+
+                if signature_file is not None:
+                    st.session_state.admin_signature_file = signature_file
+
                 register_btn = st.button("Register", key=f"admin_signup_register_btn_{st.session_state.admin_signup_reset_key}", disabled=st.session_state.admin_signup_otp_loading)
+            
             if register_btn:
-                with st.spinner("Registering admin..."):
-                    st.session_state.admin_signup_otp_loading = True
-                    data = st.session_state.admin_signup_form_data
-                    password_hash = auth.hash_password(data['password']).decode('utf-8')
-                    created = auth.create_user(data['name'], data['dob'], data['email'], data['phone'], password_hash, is_admin=1, signature_path=data.get('signature_path', ''))
-                    if created:
-                        auth.set_user_verified(data['email'])
-                        st.session_state.admin_signup_success = True
-                        st.session_state.admin_signup_otp_loading = False
+                if signature_file is None:
+                    st.error("Please upload a valid signature file before registering.")
+                    time.sleep(2)
+                    st.rerun()
+                else:
+                    if signature_file.size > 200 * 1024:
+                        st.error("File size must be <= 200KB")
+                        time.sleep(2)
                         st.rerun()
                     else:
-                        st.error("Failed to create admin. Email may already be registered.")
-                        st.session_state.admin_signup_otp_loading = False
+                        subfolder = sub_sign_path
+                        type = 'admin_signature'
+                        user_id = email
+                        doc_name = signature_file.name
+                        signature_path = file_utils.upload_file(signature_file,doc_name,subfolder,type,user_id)
+
+                        # Save in session so it's available during registration
+                        st.session_state.admin_signup_form_data['signature_path'] = signature_path    
+
+                        with st.spinner("Registering admin..."):
+                            st.session_state.admin_signup_otp_loading = True
+                            data = st.session_state.admin_signup_form_data
+                            password_hash = auth.hash_password(data['password']).decode('utf-8')
+                            created = auth.create_user(data['name'], data['dob'], data['email'], data['phone'], password_hash, is_admin=1, signature_path=data.get('signature_path', ''))
+                            if created:
+                                auth.set_user_verified(data['email'])
+                                st.session_state.admin_signup_success = True
+                                st.session_state.admin_signup_otp_loading = False
+                            else:
+                                st.error("Failed to create admin. Email may already be registered.")
+                                time.sleep(2)
+                                st.rerun()
+                                st.session_state.admin_signup_otp_loading = False
+
             # Handle Resend OTP
             if resend_otp_btn and not resend_disabled:
                 with st.spinner("Resending OTP..."):
@@ -1268,9 +1290,6 @@ def admin_login_page():
             # Live countdown for OTP resend
             if st.session_state.get('admin_signup_otp_sent') and not st.session_state.get('admin_signup_otp_resend_enabled', False):
                 st_autorefresh(interval=1000, key="admin_signup_otp_timer_refresh")
-        # Option to go to login (always show at bottom)
-        # st.markdown('<div style="text-align: right; margin-top: 1.5em;">Already registered? <a href="#" onclick="window.parent.document.querySelectorAll(\'button[role=tab]\')[0].click();return false;" style="color: #1a237e; text-decoration: underline; font-weight: bold;">Login</a></div>', unsafe_allow_html=True)
-
 
 # --- Admin Dashboard ---
 def admin_dashboard():

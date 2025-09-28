@@ -397,6 +397,21 @@ def admin_data_page():
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",):
                 st.success("✅ Data downloaded successfully as Excel")
 
+            st.markdown("#### Delete User From Data")
+
+            c1,c2,c3 = st.columns(3)
+            with c1:
+                options = ["","user","admin"]
+                user_type = st.selectbox("Select Payment Mode:",options)
+                options = database.user_list_fetch(user_type)
+                selected = st.selectbox("Select User Mail",options)
+
+                if st.button("Delete"):
+                    database.delete_user(selected,user_type)
+                    st.success(f"{selected} user deleted successfully")
+                    time.sleep(1)
+                    st.rerun()
+
         else:
             st.warning("No data found.")
 

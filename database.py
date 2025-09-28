@@ -111,3 +111,35 @@ def gender_lst_fetch():
         gender_lst.append(gender.strip())
     conn.close()
     return gender_lst
+
+def user_list_fetch(user_type):
+    conn = get_connection()
+    cursor = conn.cursor()
+    if user_type == 'user':
+        is_admin = '0'
+    else:
+        is_admin = '1'
+
+    cursor.execute("SELECT email from users where is_admin = %s",(is_admin))
+    rows = cursor.fetchall()
+
+    users_lst = [""]
+    for i in rows:
+        user_id = list(i.values())[0]
+        users_lst.append(user_id.strip())
+    conn.close()
+    return users_lst
+
+def delete_user(user_id, user_type):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    if user_type == 'user':
+        is_admin = 0   # integer, not string
+    else:
+        is_admin = 1
+    
+    cursor.execute("DELETE FROM users WHERE is_admin = %s AND email = %s", (is_admin, user_id))
+    conn.commit()
+    cursor.close()
+    conn.close()

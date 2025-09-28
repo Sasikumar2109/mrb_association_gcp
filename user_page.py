@@ -118,9 +118,12 @@ def profile_page():
         st.markdown('<span style="background:#4caf50;color:#fff;padding:0.4em 1.2em;border-radius:8px;font-weight:bold;">Profile Status: APPROVED</span>', unsafe_allow_html=True)
     elif status == 'pending':
         st.markdown('<span style="background:#ffc107;color:#222;padding:0.4em 1.2em;border-radius:8px;font-weight:bold;">Profile Status: PENDING</span>', unsafe_allow_html=True)
-    elif status:
+    elif status == 'rejected':
         st.markdown(f'<span style="background:#bdbdbd;color:#222;padding:0.4em 1.2em;border-radius:8px;font-weight:bold;">Profile Status: {status.upper()}</span>', unsafe_allow_html=True)
         st.markdown(f"Your Profile Rejected due to {reason}")
+    elif status:
+        st.markdown(f'<span style="background:#bdbdbd;color:#222;padding:0.4em 1.2em;border-radius:8px;font-weight:bold;">Profile Status: {status.upper()}</span>', unsafe_allow_html=True)
+
 
     col1, col2 = st.columns([2, 1])
     with col1:
