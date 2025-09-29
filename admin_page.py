@@ -150,7 +150,7 @@ def prepare_profile(user):
         'auth_signature_path':auth_signature_path
         }
 
-        print(profile_data)
+        
 
         profile_pdf = file_utils.create_profile(machine,terms_file_path,file_name,**profile_data)
 

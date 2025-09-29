@@ -34,7 +34,7 @@ def get_next_member_id():
     conn = get_connection()
     c = conn.cursor()
     year = datetime.datetime.now().year
-    prefix = "582022"
+    prefix = ""
     query = "SELECT member_id FROM users WHERE member_id LIKE ?"
     params = (f"{prefix}{year}%",)
 
@@ -45,13 +45,14 @@ def get_next_member_id():
     max_id = 0
     for row in rows:
         try:
-            num = int(row['member_id'][-6:])
+            num = int(row['member_id'][-5:])
             if num > max_id:
                 max_id = num
         except:
             continue
+
     next_id = max_id + 1
-    member_id = f"{prefix}{year}{next_id:06d}"
+    member_id = f"{prefix}{year}{next_id:05d}"
     conn.close()
     return member_id
 

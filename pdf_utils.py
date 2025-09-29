@@ -133,6 +133,7 @@ def draw_id_card_front(c, x_offset, y_offset, width, height, name, designation, 
             issue_dt = datetime.today()
     else:
         issue_dt = datetime.today()
+
     valid_till = issue_dt + timedelta(days=365)
     issue_date_str = issue_dt.strftime('%d-%m-%Y')
     valid_till_str = valid_till.strftime('%d-%m-%Y')
@@ -144,9 +145,10 @@ def draw_id_card_front(c, x_offset, y_offset, width, height, name, designation, 
     field_x = x_offset + 4*mm
     colon_x = x_offset + 26*mm
     value_x = x_offset + 28*mm
-    row_height = 5*mm
-    details_y = photo_y - 14*mm
+    row_height = 4.5*mm
+    details_y = photo_y - 12*mm
     fields = [
+        ("Member ID",str(member_id) if member_id else '-'),
         ("RNRM Number", str(rnrm_number) if rnrm_number else '-'),
         ("DOB", dob_str),
         ("Blood Group", str(blood_group) if blood_group else '-'),
@@ -160,6 +162,7 @@ def draw_id_card_front(c, x_offset, y_offset, width, height, name, designation, 
         c.drawString(field_x, y, field)
         c.drawString(colon_x, y, ":")
         c.drawString(value_x, y, value)
+
     # Signature section
     sig_y = details_y - len(fields)*row_height - 4*mm  # Move up by 2mm
     sig_img_h = 7*mm
@@ -169,11 +172,11 @@ def draw_id_card_front(c, x_offset, y_offset, width, height, name, designation, 
 
     sign_reader = file_utils.get_image_reader(auth_signature_path)
     if sign_reader:
-        c.drawImage(sign_reader, auth_x, sig_y, sig_img_w, sig_img_h, mask='auto')
+        c.drawImage(sign_reader, auth_x, sig_y - 1*mm, sig_img_w, sig_img_h, mask='auto')
 
     c.setFont('Helvetica', 7)
     c.setFillColor(colors.black)
-    c.drawRightString(x_offset + width - right_margin, sig_y - 2*mm, "Authorized Signatory")
+    c.drawRightString(x_offset + width - right_margin, sig_y - 4*mm, "Authorized Signatory")
     # Footer (stylish curved bottom bar - wave)
     bottom_bar_height = 4*mm
     bottom_bar_curve = 4*mm
