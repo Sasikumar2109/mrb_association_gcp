@@ -1,6 +1,5 @@
 import bcrypt
 import sqlite3
-from db_utils import get_connection
 import datetime
 import time
 import os
@@ -31,16 +30,12 @@ def verify_password(plain_password, hashed_password):
     return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password)
 
 def get_next_member_id():
-    conn = get_connection()
-    c = conn.cursor()
     year = datetime.datetime.now().year
     prefix = ""
     query = "SELECT member_id FROM users WHERE member_id LIKE ?"
     params = (f"{prefix}{year}%",)
 
-    execute_query(cursor=c,query=query,params=params,machine=machine)
-    rows = c.fetchall()
-    rows = file_utils.convert_to_dict(c,rows)
+    rows = execute_query(query=query,params=params)
 
     max_id = 0
     for row in rows:
@@ -53,7 +48,6 @@ def get_next_member_id():
 
     next_id = max_id + 1
     member_id = f"{prefix}{year}{next_id:05d}"
-    conn.close()
     return member_id
 
 def create_user(name, dob, email, phone, password_hash, is_admin=False, signature_path=None):
@@ -61,26 +55,20 @@ def create_user(name, dob, email, phone, password_hash, is_admin=False, signatur
         member_id = f"ADMIN-{int(time.time())}"
     else:
         member_id = get_next_member_id()
-    conn = get_connection()
     
-    c = conn.cursor()
     try:
         query = '''INSERT INTO users (name, dob, email, phone, password_hash, is_admin, member_id, profile_status, signature_path)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'''
         params = (name, dob, email, phone, password_hash, 1 if is_admin else 0, member_id, 'not submitted', signature_path)
 
-        execute_query(cursor=c,query=query,params=params,machine=machine)
+        execute_query(query=query,params=params)
 
-        conn.commit()
         return True
     except Exception as e:
         return False
-    finally:
-        conn.close()
+        
 
 def get_user_by_email(email, is_admin=None):
-    conn = get_connection()
-    c = conn.cursor()
     
     if is_admin is None:
         query = 'SELECT * FROM users WHERE email = ?'
@@ -88,34 +76,24 @@ def get_user_by_email(email, is_admin=None):
     else:
         query = 'SELECT * FROM users WHERE email = ? AND is_admin = ?'
         params = (email, is_admin)
-
-    execute_query(cursor=c,query=query,params=params,machine=machine)
     
-    user = c.fetchall()
-    users = file_utils.convert_to_dict(c,user)
+    users = execute_query(query=query,params=params)
+
     user = users[0] if users else None
-    conn.close()
     return user if user else None
 
 def set_user_verified(email, is_admin=0):
-    conn = get_connection()
-    c = conn.cursor()
-
     query = 'UPDATE users SET is_verified = 1 WHERE email = ? AND is_admin = ?'
     params = (email, is_admin)
-    execute_query(cursor=c,query=query,params=params,machine=machine)
-    conn.commit()
-    conn.close()
+    execute_query(query=query,params=params)
+
 
 def set_user_password(email, password_hash, is_admin=0):
-    conn = get_connection()
-    c = conn.cursor()
 
     query = 'UPDATE users SET password_hash = ? WHERE email = ? AND is_admin = ?'
     params = (password_hash, email, is_admin)
-    execute_query(cursor=c,query=query,params=params,machine=machine)
-    conn.commit()
-    conn.close()
+    execute_query(query=query,params=params)
+
 
 def update_user_profile(user_data):
 
@@ -145,8 +123,6 @@ def update_user_profile(user_data):
     aadhaar_doc_path = getattr(user_data,'aadhaar_doc_path',None)
     signature_path = getattr(user_data,'signature_path',None)
 
-    conn = get_connection()
-    c = conn.cursor()
     now_str = None
 
     try:
@@ -189,13 +165,10 @@ def update_user_profile(user_data):
                     pincode, address, profile_status, photo_path, aadhaar_doc_path, signature_path, 
                     now_str, email)
     
-    execute_query(cursor=c,query=query,params=params,machine=machine)
-    conn.commit()
-    conn.close()
+    execute_query(query=query,params=params)
+
 
 def approve_user_profile(email, approver_email=None):
-    conn = get_connection()
-    c = conn.cursor()
     now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     if approver_email:
         query = '''UPDATE users SET profile_status = 'approved', profile_approved_date = ?, approved_by = ? WHERE email = ? AND is_admin = 0'''
@@ -204,26 +177,18 @@ def approve_user_profile(email, approver_email=None):
         query = '''UPDATE users SET profile_status = 'approved', profile_approved_date = ? WHERE email = ? AND is_admin = 0''', 
         params = (now_str, email)
     
-    execute_query(cursor=c,query=query,params=params,machine=machine)
+    execute_query(query=query,params=params)
 
-    conn.commit()
-    conn.close()
 
 def update_signup_details(old_email, new_name, new_dob, new_email, new_phone):
-    conn = get_connection()
-    c = conn.cursor()
+
     query = '''UPDATE users SET name = ?, dob = ?, email = ?, phone = ? WHERE email = ? AND is_admin = 0'''
     params = (new_name, new_dob, new_email, new_phone, old_email)
-    execute_query(cursor=c,query=query,params=params,machine=machine)
-    conn.commit()
-    conn.close()
+    execute_query(query=query,params=params)
+    
 
 def is_profile_pending(email, is_admin=0):
-    conn = get_connection()
-    c = conn.cursor()
     query = 'SELECT 1 FROM users WHERE email = ? AND is_admin = ? AND profile_status =?'
     params = (email, is_admin,'pending')
-    execute_query(cursor=c,query=query,params=params,machine=machine)
-    result = c.fetchone()
-    conn.close()
+    result = execute_query(query=query,params=params,fetch='one')
     return result is not None 

@@ -7,7 +7,6 @@ import pandas as pd
 import time
 import psycopg2
 import io
-from psycopg2.extras import execute_values
 from datetime import datetime,timedelta
 from database import execute_query,get_association_info,update_association_info
 
@@ -27,8 +26,7 @@ machine = os.getenv("MACHINE")
 sub_term_path = constants.sub_term_path
 
 # database connection
-conn = database.get_connection()
-c = conn.cursor()
+
 
 
 st.markdown("""
@@ -46,9 +44,8 @@ st.markdown("""
 def admin_home_page():
 
     query = "SELECT profile_status, COUNT(*) as count FROM users WHERE is_admin = 0 GROUP BY profile_status"
-    execute_query(cursor=c,query=query,machine=machine)
-    data = c.fetchall()
-    data = file_utils.convert_to_dict(c,data)
+    data = execute_query(query=query)
+
     status_counts = {row['profile_status']: row['count'] for row in data}
     approved = status_counts.get('approved', 0)
     pending = status_counts.get('pending', 0)
@@ -150,8 +147,6 @@ def prepare_profile(user):
         'auth_signature_path':auth_signature_path
         }
 
-        
-
         profile_pdf = file_utils.create_profile(machine,terms_file_path,file_name,**profile_data)
 
         subfolder = constants.sub_profile_path
@@ -167,9 +162,8 @@ def admin_pending_user_page():
     st.markdown("### Pending User Approvals")
     search_query = st.text_input("Search by Name, Member ID, or Email", key="pending_search")
     query = "SELECT * FROM users WHERE profile_status = 'pending' AND is_admin = 0"
-    execute_query(cursor=c,query=query,machine=machine)
-    pending_users = c.fetchall()
-    pending_users = file_utils.convert_to_dict(c,pending_users)
+
+    pending_users = execute_query(query=query)
 
     # Filter users by search
     if search_query:
@@ -222,9 +216,8 @@ def admin_pending_user_page():
                             if txt_cmd:
                                 query = "UPDATE users SET profile_status = 'rejected', comments_1 = ? WHERE email = ? AND is_admin = 0"
                                 params = (txt_cmd,user['email'],)
+                                execute_query(query=query,params=params)
 
-                                execute_query(cursor=c,query=query,params=params,machine=machine)
-                                conn.commit()
                                 st.warning("User rejected!")
                                 st.rerun()
                             else:
@@ -272,8 +265,8 @@ def admin_pending_user_page():
 
                                     query = "UPDATE users SET payment_mode = ?, payment_amount = ?, paid_to = ?, transaction_id = ?, payment_date = ? , pament_remarks = ? WHERE email = ? AND is_admin = 0"
                                     params = (payment_mode,payment_amount , paid_to, transaction_id, payment_date, payment_remarks ,user['email'],)
-                                    execute_query(cursor=c,query=query,params=params,machine=machine)
-                                    conn.commit()
+                                    execute_query(query=query,params=params)
+                                    
 
                                     auth.approve_user_profile(user['email'], approver_email=approver_email)
 
@@ -281,9 +274,8 @@ def admin_pending_user_page():
                                     profile_path = prepare_profile(user=user)
                                     query = "UPDATE users SET profile_path = ? WHERE email = ? AND is_admin = 0"
                                     params = (profile_path ,user['email'],)
-                                    execute_query(cursor=c,query=query,params=params,machine=machine)
-                                    conn.commit()
-
+                                    execute_query(query=query,params=params)
+                                
                                     payment_modal.close()
                                     st.rerun()
                             with c2:
@@ -354,9 +346,7 @@ def admin_approved_user_page():
     st.markdown("### Approved Users")
     search_query = st.text_input("Search by Name, Member ID, or Email", key="approved_search")
     query = "SELECT * FROM users WHERE profile_status = 'approved' AND is_admin = 0"
-    execute_query(cursor=c,query=query,machine=machine)
-    approved_users = c.fetchall()
-    approved_users = file_utils.convert_to_dict(c,approved_users)
+    approved_users = execute_query(query=query)
 
     # Filter users by search
     if search_query:
@@ -389,8 +379,8 @@ def admin_approved_user_page():
             if remove_btn:
                 query = "DELETE FROM users WHERE email = ? AND is_admin = 0"
                 params = (user['email'],)
-                execute_query(cursor=c,query=query,params=params,machine=machine)
-                conn.commit()
+                execute_query(query=query,params=params)
+                
                 st.warning("User removed!")
                 st.rerun()
 
@@ -475,10 +465,9 @@ def admin_data_page():
     table_name = "users"
     st.write(f"Showing records from **{table_name}**")
     try:
-        conn = database.get_connection()
-        cursor = conn.cursor()
-        cursor.execute(f"SELECT * FROM {table_name}")  # limit rows
-        rows = cursor.fetchall()
+        query = "SELECT * FROM users"
+        rows = execute_query(query=query)
+
         if rows:
             df = pd.DataFrame(rows)
             st.dataframe(df)
@@ -526,11 +515,7 @@ def admin_data_page():
 
     except Exception as e:
         st.error(f"Database error: {e}")
-    finally:
-        if 'cur' in locals():
-            cursor.close()
-        if 'conn' in locals():
-            conn.close()        
+            
 
 
 
@@ -666,23 +651,17 @@ def admin_upload_master_page():
                 st.warning("⚠️ Please enter a designation.")
             else:
                 try:
-                    conn = database.get_connection()
-                    c = conn.cursor()
                     query = "INSERT INTO designation_tbl (designation_name) VALUES %s ON CONFLICT DO NOTHING"
                     params = all_designation
-                    execute_values(cur=c,sql=query,argslist=params)
-                    conn.commit()
-                    conn.close()
+
+                    execute_query(query=query,params=params,insert_many=True)
+
                     st.success(f"✅ '{new_designation}' added successfully!")
                     time.sleep(2)
                     st.session_state.new_designation = ""
                     st.rerun()
                     
-                except psycopg2.errors.UniqueViolation:
-                    conn.rollback()
-                    st.error(f"❌ '{new_designation}' already exists.")
                 except Exception as e:
-                    conn.rollback()
                     st.error(f"❌ Error: {e}")
     with col2:
         if st.button("❌ Remove Designation"):
@@ -691,23 +670,17 @@ def admin_upload_master_page():
                 st.warning("⚠️ Please enter a designation.")
             else:
                 try:
-                    conn = database.get_connection()
-                    c = conn.cursor()
+                    
                     query = "DELETE FROM designation_tbl WHERE designation_name = %s"
                     params = all_designation
-                    c.executemany(query=query,vars_list=params)
-                    conn.commit()
-                    conn.close()
+                    execute_query(query=query,params=params,many=True)
+                    
                     st.success(f"✅ '{new_designation}' Removed successfully!")
                     time.sleep(3)
                     st.session_state.new_designation = ""
                     st.rerun()
                     
-                except psycopg2.errors.UniqueViolation:
-                    conn.rollback()
-                    st.error(f"❌ '{new_designation}' is not exists.")
                 except Exception as e:
-                    conn.rollback()
                     st.error(f"❌ Error: {e}")
 
     
@@ -727,13 +700,11 @@ def admin_upload_master_page():
                 st.warning("⚠️ Please enter a Blood Group.")
             else:
                 try:
-                    conn = database.get_connection()
-                    c = conn.cursor()
+                    
                     query = "INSERT INTO blood_group_tbl (blood_group_name) VALUES %s ON CONFLICT DO NOTHING"
                     params = all_blood_group
-                    execute_values(cur=c,sql=query,argslist=params)
-                    conn.commit()
-                    conn.close()
+                    execute_query(query=query,params=params,insert_many=True)
+                    
                     st.success(f"✅ '{new_blood_group}' added successfully!")
                     time.sleep(3)
                     st.session_state.new_blood_group = ""
@@ -753,14 +724,10 @@ def admin_upload_master_page():
                 st.warning("⚠️ Please enter a Blood Group.")
             else:
                 try:
-                    conn = database.get_connection()
-                    c = conn.cursor()
                     query = "DELETE FROM blood_group_tbl WHERE blood_group_name = %s"
                     params = all_blood_group
-                    c.executemany(query=query,vars_list=params)
+                    execute_query(query=query,params=params,many=True)
 
-                    conn.commit()
-                    conn.close()
                     st.success(f"✅ '{new_blood_group}' Removed successfully!")
                     time.sleep(3)
                     st.session_state.new_blood_group = ""
@@ -791,13 +758,11 @@ def admin_upload_master_page():
                 st.warning("⚠️ Please enter a Education Qualification.")
             else:
                 try:
-                    conn = database.get_connection()
-                    c = conn.cursor()
+                    
                     query = "INSERT INTO education_qualification_tbl (qualification_name) VALUES %s ON CONFLICT DO NOTHING"
                     params = all_education_qualification
-                    execute_values(cur=c,sql=query,argslist=params)
-                    conn.commit()
-                    conn.close()
+                    execute_query(query=query,params=params,insert_many=True)
+                    
                     st.success(f"✅ '{new_education_qualification}' added successfully!")
                     time.sleep(3)
                     st.session_state.new_education_qualification = ""
@@ -816,22 +781,15 @@ def admin_upload_master_page():
                 st.warning("⚠️ Please enter a Education Qualification.")
             else:
                 try:
-                    conn = database.get_connection()
-                    c = conn.cursor()
                     query = "DELETE FROM education_qualification_tbl WHERE qualification_name = %s"
                     params = all_blood_group
-                    c.executemany(query=query,vars_list=params)
+                    execute_query(query,params,many=True)
 
-                    conn.commit()
-                    conn.close()
+                
                     st.success(f"✅ '{new_education_qualification}' added successfully!")
                     time.sleep(3)
                     st.session_state.new_education_qualification = ""
-                    st.rerun()
-                    
-                except psycopg2.errors.UniqueViolation:
-                    conn.rollback()
-                    st.error(f"❌ '{new_education_qualification}' already exists.")
+                    st.rerun() 
+                
                 except Exception as e:
-                    conn.rollback()
                     st.error(f"❌ Error: {e}")

@@ -73,14 +73,6 @@ def upload_file(file_obj,doc_name,subfolder,type,user_id):
         return blob_path
 
 
-def convert_to_dict(cursor, rows):
-    if not rows:
-        result = []
-    else:
-        result = rows
-    return result
-
-
 def download_document_pdf(label: str, file_path:str, machine: str):
     if not file_path:
         st.warning(f"{label} not available.")

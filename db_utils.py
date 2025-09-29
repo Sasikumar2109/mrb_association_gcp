@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from psycopg2 import pool
 
 # loading env variables
 load_dotenv()
@@ -16,27 +17,27 @@ db_url = os.getenv("DB_URL")
 
 # connecting with database
 
-def get_connection():
-    if machine=='local':
-        conn = psycopg2.connect(
-            dbname=db_name,
-            user=db_user,
-            password=db_pw,
-            host=db_host,
-            port=db_port,
-            cursor_factory=RealDictCursor
-        )
-    else:
-        conn = psycopg2.connect(db_url,cursor_factory=RealDictCursor)
-    return conn
+
+if machine=='local':
+    connection_pool = pool.SimpleConnectionPool(
+        minconn=1,
+        maxconn=50,
+        dbname=db_name,
+        user=db_user,
+        password=db_pw,
+        host=db_host,
+        port=db_port,
+        cursor_factory=RealDictCursor
+    )
+else:
+    connection_pool = pool.SimpleConnectionPool(minconn=1,maxconn=50,dsn=db_url,cursor_factory=RealDictCursor)
+
 
 # creating tables
 
 def init_db():
-    conn = get_connection()
-    c = conn.cursor()
     # Users table
-    c.execute('''
+    query = '''
         CREATE TABLE users (
             id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
@@ -86,11 +87,10 @@ def init_db():
             bill_no INT GENERATED ALWAYS AS IDENTITY (START WITH 1000 INCREMENT BY 1),
             CONSTRAINT bill_no_unique UNIQUE (bill_no),
             CONSTRAINT unique_email_admin UNIQUE(email, is_admin)
-        );
-    ''')
+        )'''
 
     # OTP table
-    c.execute('''
+    query = '''
         CREATE TABLE IF NOT EXISTS otps (
             id SERIAL PRIMARY KEY,
             email TEXT NOT NULL,
@@ -98,10 +98,10 @@ def init_db():
             purpose TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
-    ''')
+    '''
 
     # Association Info table
-    c.execute('''
+    query = '''
         CREATE TABLE IF NOT EXISTS association_info (
             id INT PRIMARY KEY CHECK (id = 1),
             association_name TEXT NOT NULL,
@@ -114,9 +114,8 @@ def init_db():
             last_update_by TEXT,
             last_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
-    ''')
-    conn.commit()
-    conn.close()
+    '''
+    
 
 def query_create_table():
     ### 1. Gender master table

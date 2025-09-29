@@ -647,8 +647,8 @@ def signup_page():
 
     if st.session_state.get('show_signup_success'):
         st.success("Registration successful! You can now log in.")
-        time.sleep(2)
         st.session_state.show_signup_success = False
+        time.sleep(2)
         st.rerun()
 
 def login_page():
@@ -1073,7 +1073,6 @@ def admin_login_page():
         # --- Success message and reset after 4 seconds ---
         if st.session_state.admin_signup_success:
             st.success("Admin registration successful! You can now log in.")
-            time.sleep(2)
             st.session_state.admin_signup_otp_sent = False
             st.session_state.admin_signup_otp_verified = False
             st.session_state.admin_signup_email = ''
@@ -1082,6 +1081,7 @@ def admin_login_page():
             st.session_state.admin_signup_otp_resend_enabled = False
             st.session_state.admin_signup_success = False
             st.session_state.admin_signup_reset_key += 1
+            time.sleep(2)
             st.rerun()
 
         # --- State initialization for loading ---
@@ -1267,9 +1267,9 @@ def admin_login_page():
                                 st.session_state.admin_signup_otp_loading = False
                             else:
                                 st.error("Failed to create admin. Email may already be registered.")
+                                st.session_state.admin_signup_otp_loading = False
                                 time.sleep(2)
                                 st.rerun()
-                                st.session_state.admin_signup_otp_loading = False
 
             # Handle Resend OTP
             if resend_otp_btn and not resend_disabled:
@@ -1308,10 +1308,7 @@ def admin_dashboard():
         },
         key="admin_menu"
     )
-
-    conn = database.get_connection()
-    c = conn.cursor()
-        
+      
     if admin_menu == "Home":
         admin_page.admin_home_page()
 
@@ -1336,8 +1333,6 @@ def admin_dashboard():
     # Logout
     elif admin_menu == "Logout":
         page_utils.logout()
-
-    conn.close()
 
 
 def main():

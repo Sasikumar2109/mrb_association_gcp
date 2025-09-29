@@ -1,7 +1,6 @@
 import random
 import smtplib
 from email.mime.text import MIMEText
-from database import get_connection
 from dotenv import load_dotenv
 import os
 import file_utils
@@ -42,33 +41,24 @@ def send_otp_email(email, otp):
         return False
 
 def store_otp(email, otp, purpose):
-    conn = get_connection()
-    c = conn.cursor()
     query = 'INSERT INTO otps (email, otp, purpose) VALUES (?, ?, ?)'
     params = (email, otp, purpose)
-    execute_query(cursor=c,query=query,params=params,machine=machine)
-    conn.commit()
-    conn.close()
+    execute_query(query=query,params=params)
 
 def verify_otp(email, otp, purpose):
-    conn = get_connection()
-    c = conn.cursor()
     # Fetch only the most recent OTP for this email and purpose
 
     query = 'SELECT id, otp FROM otps WHERE email = ? AND purpose = ? ORDER BY id DESC LIMIT 1'
     params = (email, purpose)
-    execute_query(cursor=c,query=query,params=params,machine=machine)
 
-    row = c.fetchall() # fetchone to fetchall
-    rows = file_utils.convert_to_dict(c,row)
+    rows = execute_query(query=query,params=params)
+    
     row = rows[0] if rows else None
  
     if row and row['otp'] == otp:
         query = 'DELETE FROM otps WHERE email = ? AND purpose = ?'
         params = (email, purpose)
-        execute_query(cursor=c,query=query,params=params,machine=machine)
-        conn.commit()
-        conn.close()
+        execute_query(query=query,params=params)
+        
         return True
-    conn.close()
     return False
