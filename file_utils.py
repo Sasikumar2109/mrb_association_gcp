@@ -272,3 +272,20 @@ def display_photo(photo_path, caption=None, use_container_width=False, width=Non
             st.image(photo_path, caption=caption, use_container_width=use_container_width, width=width)
         else:
             st.warning(f"Photo not found: {photo_path}")
+
+def generate_pdf_bytes(file_path,machine):
+    
+    if (machine == 'local') and (file_path in os.path.exists(file_path)):
+        with open(file_path, "rb") as f:
+            pdf_bytes = f.read()
+
+    elif (machine == 'gcp') and (file_path) and file_path.startswith("http"):
+        response = requests.get(file_path)
+        if response.status_code == 200:
+            pdf_bytes = response.content
+        else:
+            pdf_bytes = None
+    else:
+        pdf_bytes = None
+    
+    return pdf_bytes

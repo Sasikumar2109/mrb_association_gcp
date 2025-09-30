@@ -343,6 +343,9 @@ def admin_pending_user_page():
 
 def admin_approved_user_page():
 
+    if 'profile_path' not in st.session_state:
+        st.session_state.profile_path = ''
+
     st.markdown("### Approved Users")
     search_query = st.text_input("Search by Name, Member ID, or Email", key="approved_search")
     query = "SELECT * FROM users WHERE profile_status = 'approved' AND is_admin = 0"
@@ -386,16 +389,17 @@ def admin_approved_user_page():
 
             with cols[5]:  
                 profile_path = user.get('profile_path','')
-                
-                if profile_path and os.path.exists(profile_path):
+                pdf_bytes = file_utils.generate_pdf_bytes(profile_path,machine=machine)
+                # st.session_state.profile_path = profile_path
+                if pdf_bytes:
+                    # profile_path = st.session_state.profile_path
                     # PDF exists → provide bytes to download
-                    with open(profile_path, "rb") as f:
-                       pdf_bytes = f.read()
+                    
 
-                    st.download_button(label="Download Profile",data=pdf_bytes,file_name=f"{user['email']}_profile.pdf",mime="application/pdf")
+                    st.download_button(label="Download Profile",data=pdf_bytes,file_name=f"{user['email']}_profile_with_terms.pdf",mime="application/pdf")
                 else:
                     # PDF missing → provide empty data, disabled button, and show warning
-                    st.download_button(label="Download Profile",data=b"",file_name=f"{user['email']}_profile.pdf",mime="application/pdf",disabled=True)
+                    st.download_button(label="Download Profile",data=b"",file_name=f"{user['email']}_profile_with_terms.pdf",mime="application/pdf",disabled=True)
 
             
             if modal.is_open():
@@ -625,8 +629,8 @@ def admin_association_info_page():
 
     if st.session_state.get('assoc_info_updated'):
         st.success("Association info updated.")
-        time.sleep(2)
         st.session_state['assoc_info_updated'] = False
+        time.sleep(2)
         st.rerun()
     st.caption(f"Last updated by: {last_update_by or '-'} at {last_updated_at or '-'}")
 
@@ -657,8 +661,8 @@ def admin_upload_master_page():
                     execute_query(query=query,params=params,insert_many=True)
 
                     st.success(f"✅ '{new_designation}' added successfully!")
-                    time.sleep(2)
                     st.session_state.new_designation = ""
+                    time.sleep(2)
                     st.rerun()
                     
                 except Exception as e:
@@ -676,8 +680,8 @@ def admin_upload_master_page():
                     execute_query(query=query,params=params,many=True)
                     
                     st.success(f"✅ '{new_designation}' Removed successfully!")
-                    time.sleep(3)
                     st.session_state.new_designation = ""
+                    time.sleep(3)
                     st.rerun()
                     
                 except Exception as e:
@@ -706,15 +710,11 @@ def admin_upload_master_page():
                     execute_query(query=query,params=params,insert_many=True)
                     
                     st.success(f"✅ '{new_blood_group}' added successfully!")
-                    time.sleep(3)
                     st.session_state.new_blood_group = ""
+                    time.sleep(3)
                     st.rerun()
                     
-                except psycopg2.errors.UniqueViolation:
-                    conn.rollback()
-                    st.error(f"❌ '{new_blood_group}' already exists.")
                 except Exception as e:
-                    conn.rollback()
                     st.error(f"❌ Error: {e}")
 
     with c2:
@@ -729,15 +729,10 @@ def admin_upload_master_page():
                     execute_query(query=query,params=params,many=True)
 
                     st.success(f"✅ '{new_blood_group}' Removed successfully!")
-                    time.sleep(3)
                     st.session_state.new_blood_group = ""
+                    time.sleep(3)
                     st.rerun()
-                    
-                except psycopg2.errors.UniqueViolation:
-                    conn.rollback()
-                    st.error(f"❌ '{new_blood_group}' is not exists.")
                 except Exception as e:
-                    conn.rollback()
                     st.error(f"❌ Error: {e}")
 
 
@@ -764,15 +759,11 @@ def admin_upload_master_page():
                     execute_query(query=query,params=params,insert_many=True)
                     
                     st.success(f"✅ '{new_education_qualification}' added successfully!")
-                    time.sleep(3)
-                    st.session_state.new_education_qualification = ""
-                    st.rerun()
                     
-                except psycopg2.errors.UniqueViolation:
-                    conn.rollback()
-                    st.error(f"❌ '{new_education_qualification}' already exists.")
+                    st.session_state.new_education_qualification = ""
+                    time.sleep(3)
+                    st.rerun()
                 except Exception as e:
-                    conn.rollback()
                     st.error(f"❌ Error: {e}")
     with c2:
         if st.button("❌ Remove Education Qualification"):
@@ -787,8 +778,8 @@ def admin_upload_master_page():
 
                 
                     st.success(f"✅ '{new_education_qualification}' added successfully!")
-                    time.sleep(3)
                     st.session_state.new_education_qualification = ""
+                    time.sleep(3)
                     st.rerun() 
                 
                 except Exception as e:
