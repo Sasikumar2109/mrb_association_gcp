@@ -71,10 +71,10 @@ def create_user(name, dob, email, phone, password_hash, is_admin=False, signatur
 def get_user_by_email(email, is_admin=None):
     
     if is_admin is None:
-        query = 'SELECT * FROM users WHERE email = ?'
+        query = 'SELECT * FROM users WHERE TRIM(email) = ?'
         params = (email,)
     else:
-        query = 'SELECT * FROM users WHERE email = ? AND is_admin = ?'
+        query = 'SELECT * FROM users WHERE TRIM(email) = ? AND is_admin = ?'
         params = (email, is_admin)
     
     users = execute_query(query=query,params=params)
@@ -83,14 +83,14 @@ def get_user_by_email(email, is_admin=None):
     return user if user else None
 
 def set_user_verified(email, is_admin=0):
-    query = 'UPDATE users SET is_verified = 1 WHERE email = ? AND is_admin = ?'
+    query = 'UPDATE users SET is_verified = 1 WHERE TRIM(email) = ? AND is_admin = ?'
     params = (email, is_admin)
     execute_query(query=query,params=params)
 
 
 def set_user_password(email, password_hash, is_admin=0):
 
-    query = 'UPDATE users SET password_hash = ? WHERE email = ? AND is_admin = ?'
+    query = 'UPDATE users SET password_hash = ? WHERE TRIM(email) = ? AND is_admin = ?'
     params = (password_hash, email, is_admin)
     execute_query(query=query,params=params)
 
@@ -157,7 +157,7 @@ def update_user_profile(user_data):
         aadhaar_doc_path = ?,
         signature_path = ?, 
         profile_submission_date = ?
-        WHERE email = ? AND is_admin = 0'''
+        WHERE TRIM(email) = ? AND is_admin = 0'''
 
         params = (designation, phone, aadhaar, workplace, rnrm_doc_path, rnrm_number,
                     emergency_contact, college, educational_qualification, gender, blood_group,
@@ -171,10 +171,10 @@ def update_user_profile(user_data):
 def approve_user_profile(email, approver_email=None):
     now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     if approver_email:
-        query = '''UPDATE users SET profile_status = 'approved', profile_approved_date = ?, approved_by = ? WHERE email = ? AND is_admin = 0'''
+        query = '''UPDATE users SET profile_status = 'approved', profile_approved_date = ?, approved_by = ? WHERE TRIM(email) = ? AND is_admin = 0'''
         params = (now_str, approver_email, email)
     else:
-        query = '''UPDATE users SET profile_status = 'approved', profile_approved_date = ? WHERE email = ? AND is_admin = 0''', 
+        query = '''UPDATE users SET profile_status = 'approved', profile_approved_date = ? WHERE TRIM(email) = ? AND is_admin = 0''', 
         params = (now_str, email)
     
     execute_query(query=query,params=params)
@@ -182,13 +182,13 @@ def approve_user_profile(email, approver_email=None):
 
 def update_signup_details(old_email, new_name, new_dob, new_email, new_phone):
 
-    query = '''UPDATE users SET name = ?, dob = ?, email = ?, phone = ? WHERE email = ? AND is_admin = 0'''
+    query = '''UPDATE users SET name = ?, dob = ?, TRIM(email) = ?, phone = ? WHERE TRIM(email) = ? AND is_admin = 0'''
     params = (new_name, new_dob, new_email, new_phone, old_email)
     execute_query(query=query,params=params)
     
 
 def is_profile_pending(email, is_admin=0):
-    query = 'SELECT 1 FROM users WHERE email = ? AND is_admin = ? AND profile_status =?'
+    query = 'SELECT 1 FROM users WHERE TRIM(email) = ? AND is_admin = ? AND profile_status =?'
     params = (email, is_admin,'pending')
     result = execute_query(query=query,params=params,fetch='one')
     return result is not None 

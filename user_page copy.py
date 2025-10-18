@@ -304,52 +304,6 @@ def update_profile_page():
         - **Mail ID:** {email}
         - **Phone Number:** {phone}
         """)
-    
-    is_pending = auth.is_profile_pending(user['email'])
-    profile_status = user.get('profile_status', 'not submitted')
-    if profile_status == 'not submitted':
-        st.info('Profile Status: Not Submitted')
-        upload_disabled = False
-    else:
-        upload_disabled = is_pending
-    
-    u1,u2,u3 = st.columns([1.5, 4, 1.5])
-    # Passport photo uploader
-    with u2:
-        passport_photo = st.file_uploader(
-            "Passport Size Photo  *",
-            type=["jpg", "jpeg", "png"],
-            help="Upload a recent passport size photo (JPG/JPEG/PNG, 50-100KB).",
-            disabled=upload_disabled,
-            key="passport_photo_uploader"
-        )
-        st.caption("Limit 20KB to 100KB • JPG, JPEG, PNG")
-        # RNRM and Aadhaar uploaders at the bottom (keep only these)
-        rnrm_doc = st.file_uploader(
-            "RNRM Document  *",
-            type=["pdf", "jpg", "jpeg", "png"],
-            help="Upload your RNRM certificate/document (PDF/JPG/JPEG/PNG, max 300kb).",
-            disabled=upload_disabled,
-            key="rnrm_doc_uploader"
-        )
-        st.caption("Limit 500KB per file • PDF, JPG, JPEG, PNG")
-        aadhaar_doc = st.file_uploader(
-            "Aadhaar Document  *",
-            type=["pdf", "jpg", "jpeg", "png"],
-            help="Upload your Aadhaar document (PDF/JPG/JPEG/PNG, max 300kb).",
-            disabled=upload_disabled,
-            key="aadhaar_doc_uploader"
-        )
-        st.caption("Limit 500KB per file • PDF, JPG, JPEG, PNG")
-        signature_file = st.file_uploader(
-            "Signature  *",
-            type=["png", "jpg", "jpeg"],
-            help="Upload your signature image (PNG/JPG, max 100KB).",
-            disabled=upload_disabled,
-            key="signature_uploader"
-        )
-        st.caption("Limit 100KB per file • PDF, JPG, JPEG, PNG")
-        
 
     # --- Form Key for Reset ---
     if 'update_profile_form_key' not in st.session_state:
@@ -372,8 +326,6 @@ def update_profile_page():
         form_disabled = is_pending
 
     cols = st.columns([1.5, 4, 1.5])
-        # --- Disclaimers ---
-
     with cols[1]:
         # Show the download button OUTSIDE the form
         assoc_info = get_association_info()
@@ -489,6 +441,41 @@ def update_profile_page():
                         unsafe_allow_html=True
                         )
 
+            # Passport photo uploader
+            passport_photo = st.file_uploader(
+                "Passport Size Photo  *",
+                type=["jpg", "jpeg", "png"],
+                help="Upload a recent passport size photo (JPG/JPEG/PNG, 50-100KB).",
+                disabled=form_disabled,
+                key="passport_photo_uploader"
+            )
+            st.caption("Limit 20KB to 100KB • JPG, JPEG, PNG")
+            # RNRM and Aadhaar uploaders at the bottom (keep only these)
+            rnrm_doc = st.file_uploader(
+                "RNRM Document  *",
+                type=["pdf", "jpg", "jpeg", "png"],
+                help="Upload your RNRM certificate/document (PDF/JPG/JPEG/PNG, max 300kb).",
+                disabled=form_disabled,
+                key="rnrm_doc_uploader"
+            )
+            st.caption("Limit 500KB per file • PDF, JPG, JPEG, PNG")
+            aadhaar_doc = st.file_uploader(
+                "Aadhaar Document  *",
+                type=["pdf", "jpg", "jpeg", "png"],
+                help="Upload your Aadhaar document (PDF/JPG/JPEG/PNG, max 300kb).",
+                disabled=form_disabled,
+                key="aadhaar_doc_uploader"
+            )
+            st.caption("Limit 500KB per file • PDF, JPG, JPEG, PNG")
+            signature_file = st.file_uploader(
+                "Signature  *",
+                type=["png", "jpg", "jpeg"],
+                help="Upload your signature image (PNG/JPG, max 100KB).",
+                disabled=form_disabled,
+                key="signature_uploader"
+            )
+            st.caption("Limit 100KB per file • PDF, JPG, JPEG, PNG")
+            
                 # --- Disclaimers ---
 
             st.markdown("""
@@ -534,8 +521,8 @@ def update_profile_page():
                 view_profile = st.form_submit_button("View Profile", disabled=form_disabled)
             with col2:
                 submit = st.form_submit_button("Submit for Approval", disabled=form_disabled)
-    
-    # File size and field validation (after form)
+        
+        # File size and field validation (after form)
 
         address = ",".join([door_number,street_name, village_name,post_name,taluk,district,state_name, pincode])
         address = re.sub(r",+", ", ", address)

@@ -167,6 +167,6 @@ def delete_user(user_id, user_type):
     else:
         is_admin = 1
     
-    query = "DELETE FROM users WHERE is_admin = %s AND email = %s"
+    query = "DELETE FROM users WHERE is_admin = %s AND TRIM(email) = %s"
     params = (is_admin, user_id)
     execute_query(query,params)

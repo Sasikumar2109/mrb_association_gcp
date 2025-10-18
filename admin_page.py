@@ -214,7 +214,7 @@ def admin_pending_user_page():
                         if st.button("Submit", key="submit"):
                             txt_cmd = command
                             if txt_cmd:
-                                query = "UPDATE users SET profile_status = 'rejected', comments_1 = ? WHERE email = ? AND is_admin = 0"
+                                query = "UPDATE users SET profile_status = 'rejected', comments_1 = ? WHERE TRIM(email) = ? AND is_admin = 0"
                                 params = (txt_cmd,user['email'],)
                                 execute_query(query=query,params=params)
 
@@ -263,7 +263,7 @@ def admin_pending_user_page():
                                     admin_user = st.session_state.get('user', {})
                                     approver_email = admin_user.get('email', None)
 
-                                    query = "UPDATE users SET payment_mode = ?, payment_amount = ?, paid_to = ?, transaction_id = ?, payment_date = ? , pament_remarks = ? WHERE email = ? AND is_admin = 0"
+                                    query = "UPDATE users SET payment_mode = ?, payment_amount = ?, paid_to = ?, transaction_id = ?, payment_date = ? , pament_remarks = ? WHERE TRIM(email) = ? AND is_admin = 0"
                                     params = (payment_mode,payment_amount , paid_to, transaction_id, payment_date, payment_remarks ,user['email'],)
                                     execute_query(query=query,params=params)
                                     
@@ -272,7 +272,7 @@ def admin_pending_user_page():
 
                                     st.success("User approved!")
                                     profile_path = prepare_profile(user=user)
-                                    query = "UPDATE users SET profile_path = ? WHERE email = ? AND is_admin = 0"
+                                    query = "UPDATE users SET profile_path = ? WHERE TRIM(email) = ? AND is_admin = 0"
                                     params = (profile_path ,user['email'],)
                                     execute_query(query=query,params=params)
                                 
@@ -380,7 +380,7 @@ def admin_approved_user_page():
 
             remove_btn = cols[4].button("Remove", key=f"remove_{user['email']}")
             if remove_btn:
-                query = "DELETE FROM users WHERE email = ? AND is_admin = 0"
+                query = "DELETE FROM users WHERE TRIM(email) = ? AND is_admin = 0"
                 params = (user['email'],)
                 execute_query(query=query,params=params)
                 
