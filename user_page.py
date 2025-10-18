@@ -366,7 +366,6 @@ def update_profile_page():
     is_pending = auth.is_profile_pending(user['email'])
     profile_status = user.get('profile_status', 'not submitted')
     if profile_status == 'not submitted':
-        st.info('Profile Status: Not Submitted')
         form_disabled = False
     else:
         form_disabled = is_pending

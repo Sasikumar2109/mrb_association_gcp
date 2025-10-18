@@ -275,9 +275,13 @@ def display_photo(photo_path, caption=None, use_container_width=False, width=Non
 
 def generate_pdf_bytes(file_path,machine):
     
-    if (machine == 'local') and (file_path in os.path.exists(file_path)):
-        with open(file_path, "rb") as f:
-            pdf_bytes = f.read()
+    if (machine == 'local') and (file_path and os.path.exists(file_path)):
+        try:
+            with open(file_path, "rb") as f:
+                pdf_bytes = f.read()
+        except:
+            pdf_bytes = None
+
 
     elif (machine == 'gcp') and (file_path) and file_path.startswith("http"):
         response = requests.get(file_path)

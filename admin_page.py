@@ -118,6 +118,7 @@ def prepare_profile(user):
         approver = auth.get_user_by_email(user['approved_by'], is_admin=1)
         if approver and approver.get('signature_path'):
             auth_signature_path = approver['signature_path']
+            #print(auth_signature_path)
 
         profile_data = {
         'name' : name,
