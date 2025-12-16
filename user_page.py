@@ -319,16 +319,16 @@ def update_profile_page():
         passport_photo = st.file_uploader(
             "Passport Size Photo  *",
             type=["jpg", "jpeg", "png"],
-            help="Upload a recent passport size photo (JPG/JPEG/PNG, 10-50KB).",
+            help="Upload a recent passport size photo (JPG/JPEG/PNG, 10-150KB).",
             disabled=upload_disabled,
             key="passport_photo_uploader"
         )
-        st.caption("Limit 10KB to 50KB • JPG, JPEG, PNG")
+        st.caption("Limit 10KB to 150KB • JPG, JPEG, PNG")
         # RNRM and Aadhaar uploaders at the bottom (keep only these)
         rnrm_doc = st.file_uploader(
             "RNRM Document  *",
             type=["pdf", "jpg", "jpeg", "png"],
-            help="Upload your RNRM certificate/document (PDF/JPG/JPEG/PNG, max 300kb).",
+            help="Upload your RNRM certificate/document (PDF/JPG/JPEG/PNG, max 500kb).",
             disabled=upload_disabled,
             key="rnrm_doc_uploader"
         )
@@ -344,11 +344,11 @@ def update_profile_page():
         signature_file = st.file_uploader(
             "Signature  *",
             type=["png", "jpg", "jpeg"],
-            help="Upload your signature image (PNG/JPG, max 100KB).",
+            help="Upload your signature image (PNG/JPG, max 200KB).",
             disabled=upload_disabled,
             key="signature_uploader"
         )
-        st.caption("Limit 100KB per file • PDF, JPG, JPEG, PNG")
+        st.caption("Limit 200KB per file • PDF, JPG, JPEG, PNG")
         
 
     # --- Form Key for Reset ---
@@ -542,8 +542,8 @@ def update_profile_page():
         passport_photo_path = user['photo_path'] if 'photo_path' in user else ''
         photo_error = False
         if passport_photo is not None:
-            if not (10*1024 <= passport_photo.size <= 50*1024):
-                st.error("Passport photo must be between 20KB and 100KB.")
+            if not (10*1024 <= passport_photo.size <= 150*1024):
+                st.error("Passport photo must be between 10KB and 150KB.")
                 photo_error = True
             else:
                 subfolder = sub_photo_path
@@ -634,14 +634,14 @@ def update_profile_page():
                     doc_name = aadhaar_doc.name
                     aadhaar_doc_path = file_utils.upload_file(aadhaar_doc,doc_name,subfolder,type,user_id)
                 
-                if (10*1024 >= passport_photo.size <= 50*1024):
+                if (10*1024 >= passport_photo.size <= 150*1024):
                     subfolder = sub_photo_path
                     type = 'user_photo'
                     user_id = email
                     doc_name = passport_photo.name
                     passport_photo_path = file_utils.upload_file(passport_photo,doc_name,subfolder,type,user_id)
                         
-                if signature_file.size < 100 * 1024:
+                if signature_file.size < 200 * 1024:
                     subfolder = sub_sign_path
                     type = 'user_signature'
                     user_id = email
