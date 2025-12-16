@@ -319,11 +319,11 @@ def update_profile_page():
         passport_photo = st.file_uploader(
             "Passport Size Photo  *",
             type=["jpg", "jpeg", "png"],
-            help="Upload a recent passport size photo (JPG/JPEG/PNG, 50-100KB).",
+            help="Upload a recent passport size photo (JPG/JPEG/PNG, 10-50KB).",
             disabled=upload_disabled,
             key="passport_photo_uploader"
         )
-        st.caption("Limit 20KB to 100KB • JPG, JPEG, PNG")
+        st.caption("Limit 10KB to 50KB • JPG, JPEG, PNG")
         # RNRM and Aadhaar uploaders at the bottom (keep only these)
         rnrm_doc = st.file_uploader(
             "RNRM Document  *",
@@ -542,7 +542,7 @@ def update_profile_page():
         passport_photo_path = user['photo_path'] if 'photo_path' in user else ''
         photo_error = False
         if passport_photo is not None:
-            if not (20*1024 <= passport_photo.size <= 100*1024):
+            if not (10*1024 <= passport_photo.size <= 50*1024):
                 st.error("Passport photo must be between 20KB and 100KB.")
                 photo_error = True
             else:
@@ -634,7 +634,7 @@ def update_profile_page():
                     doc_name = aadhaar_doc.name
                     aadhaar_doc_path = file_utils.upload_file(aadhaar_doc,doc_name,subfolder,type,user_id)
                 
-                if (20*1024 >= passport_photo.size <= 100*1024):
+                if (10*1024 >= passport_photo.size <= 50*1024):
                     subfolder = sub_photo_path
                     type = 'user_photo'
                     user_id = email
